@@ -566,7 +566,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
   </nav>
   <div class="sidebar-footer">
     <span>ICAZZ</span> · Admin
-    <button onclick="if(confirm('¿Borrar todos los datos?')){localStorage.removeItem('icazz_state');location.reload();}"
+    <button type="button" onclick="clearAllData()"
       style="display:block;margin-top:8px;background:none;border:1px solid rgba(224,85,85,.3);color:rgba(224,85,85,.5);
              font-family:inherit;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;cursor:pointer;width:100%;text-align:left">
       ⚠ Borrar datos
@@ -619,8 +619,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="card-header">
         <span class="card-title">Inventario de Bebidas</span>
         <div style="display:flex;gap:0.8rem;align-items:center;">
-          <button class="btn btn-outline" onclick="resetVentas()">↺ Reset ventas del día</button>
-          <button class="btn btn-gold" onclick="openAddDrinkModal()">+ Agregar producto</button>
+          <button type="button" class="btn btn-outline" onclick="resetVentas()">↺ Reset ventas del día</button>
+          <button type="button" class="btn btn-gold" onclick="openAddDrinkModal()">+ Agregar producto</button>
         </div>
       </div>
       <div class="card-body">
@@ -632,7 +632,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="card">
       <div class="card-header">
         <span class="card-title">Registro de Ventas del Día</span>
-        <button class="btn btn-outline" onclick="clearLog()" style="font-size:0.58rem;">🗑 Limpiar log</button>
+        <button type="button" class="btn btn-outline" onclick="clearLog()" style="font-size:0.58rem;">🗑 Limpiar log</button>
       </div>
       <div class="card-body">
         <table>
@@ -682,7 +682,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <div class="search-wrap">
             <input type="text" id="clientSearch" placeholder="Buscar cliente..." oninput="renderClients()">
           </div>
-          <button class="btn btn-gold" onclick="openClientModal()">+ Nuevo cliente</button>
+          <button type="button" class="btn btn-gold" onclick="openClientModal()">+ Nuevo cliente</button>
         </div>
       </div>
       <div class="card-body" style="padding:0;">
@@ -796,8 +796,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           </div>
         </div>
         <div style="display:flex;gap:0.8rem;">
-          <button class="btn btn-gold" onclick="addTransfer()">+ Registrar</button>
-          <button class="btn btn-outline" onclick="clearTransferForm()">↺ Limpiar</button>
+          <button type="button" class="btn btn-gold" onclick="addTransfer()">+ Registrar</button>
+          <button type="button" class="btn btn-outline" onclick="clearTransferForm()">↺ Limpiar</button>
         </div>
       </div>
     </div>
@@ -853,7 +853,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="card" style="margin-bottom:1.5rem;">
       <div class="card-header">
         <span class="card-title">Configurar Comisiones</span>
-        <button class="btn btn-gold" onclick="saveComissions()">Guardar</button>
+        <button type="button" class="btn btn-gold" onclick="saveComissions()">Guardar</button>
       </div>
       <div class="card-body">
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
@@ -884,15 +884,21 @@ tr:hover td { background:rgba(255,255,255,0.02); }
     <div class="card">
       <div class="card-header">
         <span class="card-title">Detalle de Transacciones por Barbero</span>
-        <div class="form-group" style="flex-direction:row;align-items:center;gap:0.5rem;margin:0;">
-          <label style="white-space:nowrap;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">Filtrar:</label>
-          <select id="filterBarbero" onchange="renderCommissionDetail()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;">
-            <option value="">Todos</option>
-            <option value="Alex">Alex</option>
-            <option value="Enzo">Enzo</option>
-            <option value="Benja">Benja</option>
-            <option value="Braian">Braian</option>
-          </select>
+        <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <label style="white-space:nowrap;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">Semana:</label>
+            <select id="filterWeek" onchange="renderCommissions();renderCommissionDetail();" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;"></select>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.4rem;">
+            <label style="white-space:nowrap;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">Barbero:</label>
+            <select id="filterBarbero" onchange="renderCommissionDetail()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;">
+              <option value="">Todos</option>
+              <option value="Alex">Alex</option>
+              <option value="Enzo">Enzo</option>
+              <option value="Benja">Benja</option>
+              <option value="Braian">Braian</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="card-body" style="padding:0;">
@@ -966,7 +972,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 <!-- ═══ MODAL: Agregar bebida personalizada ═══ -->
 <div class="modal-overlay" id="addDrinkModal">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal('addDrinkModal')">✕</button>
+    <button type="button" class="modal-close" onclick="closeModal('addDrinkModal')">✕</button>
     <div class="modal-title">Agregar / Editar Bebida</div>
     <div style="display:flex;flex-direction:column;gap:1rem;">
       <div class="form-group"><label>Nombre</label><input type="text" id="newDrinkName" placeholder="Ej: Pepsi lata"></div>
@@ -976,8 +982,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
       <div class="form-group"><label>Stock máximo</label><input type="number" id="newDrinkMax" placeholder="24" min="1"></div>
     </div>
     <div style="display:flex;gap:0.8rem;margin-top:1.5rem;">
-      <button class="btn btn-gold" onclick="confirmAddDrink()">+ Agregar</button>
-      <button class="btn btn-outline" onclick="closeModal('addDrinkModal')">Cancelar</button>
+      <button type="button" class="btn btn-gold" onclick="confirmAddDrink()">+ Agregar</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal('addDrinkModal')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -985,7 +991,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 <!-- ═══ MODAL: Nuevo / Ver cliente ═══ -->
 <div class="modal-overlay" id="clientModal">
   <div class="modal modal-wide">
-    <button class="modal-close" onclick="closeModal('clientModal')">✕</button>
+    <button type="button" class="modal-close" onclick="closeModal('clientModal')">✕</button>
     <div class="modal-title" id="clientModalTitle">Nuevo Cliente</div>
 
     <!-- TABS -->
@@ -1007,8 +1013,8 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <input type="hidden" id="cEditIdx" value="-1">
       </div>
       <div style="display:flex;gap:0.8rem;margin-top:1.5rem;">
-        <button class="btn btn-gold" onclick="saveClient()">Guardar</button>
-        <button class="btn btn-outline" onclick="closeModal('clientModal')">Cancelar</button>
+        <button type="button" class="btn btn-gold" onclick="saveClient()">Guardar</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('clientModal')">Cancelar</button>
       </div>
     </div>
 
@@ -1032,7 +1038,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
           <option value="Benja">Benja</option>
           <option value="Braian">Braian</option>
         </select>
-        <button class="btn btn-gold" onclick="logServiceForClient()" style="white-space:nowrap;">+ Registrar</button>
+        <button type="button" class="btn btn-gold" onclick="logServiceForClient()" style="white-space:nowrap;">+ Registrar</button>
       </div>
       <div style="margin-top:1rem;">
         <table class="loyalty-history-table">
@@ -1060,12 +1066,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 <!-- ═══ MODAL: Marcar comisión pagada ═══ -->
 <div class="modal-overlay" id="payModal">
   <div class="modal" style="max-width:380px;">
-    <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+    <button type="button" class="modal-close" onclick="closeModal('payModal')">✕</button>
     <div class="modal-title">Marcar como Pagado</div>
     <p style="color:var(--muted);font-size:0.72rem;margin-bottom:1.5rem;" id="payModalText">¿Confirmar pago de comisión?</p>
     <div style="display:flex;gap:0.8rem;">
-      <button class="btn btn-green" onclick="confirmPay()">✓ Confirmar</button>
-      <button class="btn btn-outline" onclick="closeModal('payModal')">Cancelar</button>
+      <button type="button" class="btn btn-green" onclick="confirmPay()">✓ Confirmar</button>
+      <button type="button" class="btn btn-outline" onclick="closeModal('payModal')">Cancelar</button>
     </div>
   </div>
 </div>
@@ -1095,9 +1101,161 @@ const STATE = {
   commissions: { Alex:50, Enzo:50, Benja:50, Braian:50 },
   paidMap: {},
   pendingPayIdx: null,
+  closedWeeks: [],    // array of { weekKey, label, startDate, endDate, closedAt }
+  currentWeekKey: null, // 'YYYY-WNN' of the active open week
 };
 
 // Persist in localStorage (resets on close — no localStorage per rules)
+
+// ══════════════════════════════════════════════════════════════
+// WEEKLY CAJA SYSTEM
+// Semana: lunes 00:00 → domingo 23:59
+// Cierre automático: cada lunes a las 00:00
+// ══════════════════════════════════════════════════════════════
+
+/** Returns the Monday 00:00:00 of the week that contains `date` */
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun,1=Mon...6=Sat
+  const diff = (day === 0) ? -6 : 1 - day; // distance to Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Returns the Sunday 23:59:59 of the week that contains `date` */
+function getWeekEnd(date) {
+  const start = getWeekStart(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
+}
+
+/** Returns a stable week key: 'YYYY-WNN' */
+function getWeekKey(date) {
+  const mon = getWeekStart(date);
+  const year = mon.getFullYear();
+  // ISO week number
+  const jan4 = new Date(year, 0, 4);
+  const startOfWeek1 = getWeekStart(jan4);
+  const weekNum = Math.round((mon - startOfWeek1) / (7 * 864e5)) + 1;
+  return year + '-W' + String(weekNum).padStart(2, '0');
+}
+
+/** Friendly label: "Lun 2 Jun → Dom 8 Jun" */
+function getWeekLabel(date) {
+  const mon = getWeekStart(date);
+  const sun = getWeekEnd(date);
+  const opts = { day: 'numeric', month: 'short' };
+  const loc = 'es-AR';
+  return 'Lun ' + mon.toLocaleDateString(loc, opts) + ' → Dom ' + sun.toLocaleDateString(loc, opts);
+}
+
+/** Returns all transfers belonging to a given weekKey */
+function getTransfersByWeek(weekKey) {
+  return STATE.transfers.filter(t => {
+    if (!t.fecha) return false;
+    return getWeekKey(new Date(t.fecha + 'T00:00:00')) === weekKey;
+  });
+}
+
+/** Current open week key */
+function getCurrentWeekKey() {
+  return getWeekKey(new Date());
+}
+
+/**
+ * AUTO-CLOSE: called on page load and on showPage.
+ * If the current date is Monday and the previous week hasn't been closed yet,
+ * close it automatically and record it in STATE.closedWeeks.
+ */
+function checkAutoClose() {
+  const now = new Date();
+  const todayKey = getCurrentWeekKey();
+
+  // Find all week keys present in transfers
+  const allWeekKeys = [...new Set(
+    STATE.transfers
+      .filter(t => t.fecha)
+      .map(t => getWeekKey(new Date(t.fecha + 'T00:00:00')))
+  )];
+
+  allWeekKeys.forEach(wk => {
+    if (wk === todayKey) return; // current week stays open
+    const alreadyClosed = STATE.closedWeeks.some(cw => cw.weekKey === wk);
+    if (!alreadyClosed) {
+      // Auto-close this past week
+      const transfers = getTransfersByWeek(wk);
+      const total = transfers.reduce((s, t) => s + t.monto, 0);
+      // Build week start date from key
+      const [y, wPart] = wk.split('-W');
+      const weekStart = getWeekStart(new Date()); // approximate, overridden below
+      // Find actual dates from transfers
+      const dates = transfers.map(t => new Date(t.fecha + 'T00:00:00')).sort((a,b)=>a-b);
+      const startDate = dates.length ? dates[0].toISOString().split('T')[0] : '';
+      const endDate   = dates.length ? dates[dates.length-1].toISOString().split('T')[0] : '';
+      STATE.closedWeeks.push({
+        weekKey: wk,
+        label: getWeekLabel(new Date(startDate + 'T12:00:00') || new Date()),
+        startDate,
+        endDate,
+        closedAt: now.toISOString(),
+        total,
+        count: transfers.length,
+        autoClose: true
+      });
+    }
+  });
+
+  // Update currentWeekKey
+  STATE.currentWeekKey = todayKey;
+  save();
+}
+
+/** Manually close current week (admin button) */
+function closeCurrentWeek() {
+  const wk = getCurrentWeekKey();
+  if (STATE.closedWeeks.some(cw => cw.weekKey === wk)) {
+    alert('Esta semana ya fue cerrada.'); return;
+  }
+  customConfirm('¿Cerrar la caja de esta semana?', function() { doCloseWeek(); });
+}
+function doCloseWeek() {
+  const wk = getCurrentWeekKey();
+  const transfers = getTransfersByWeek(wk);
+  if (!transfers.length) { alert('No hay transferencias esta semana para cerrar.'); return; }
+  const total = transfers.reduce((s, t) => s + t.monto, 0);
+  const dates = transfers.map(t => new Date(t.fecha + 'T00:00:00')).sort((a,b)=>a-b);
+  STATE.closedWeeks.push({
+    weekKey: wk,
+    label: getWeekLabel(new Date()),
+    startDate: dates[0].toISOString().split('T')[0],
+    endDate:   dates[dates.length-1].toISOString().split('T')[0],
+    closedAt:  new Date().toISOString(),
+    total,
+    count:     transfers.length,
+    autoClose: false
+  });
+  STATE.currentWeekKey = wk;
+  save();
+  renderTransfers();
+  updateTransferStats();
+  renderCommissions();
+  renderCommissionDetail();
+  alert('✓ Caja cerrada correctamente.');
+}
+
+/** Format money */
+function fmtMoney(n) {
+  return '$' + Number(n).toLocaleString('es-AR');
+}
+
+/** Is a weekKey closed? */
+function isWeekClosed(weekKey) {
+  return STATE.closedWeeks.some(cw => cw.weekKey === weekKey);
+}
+
 function save() {
   try {
     localStorage.setItem('icazz_state', JSON.stringify(STATE));
@@ -1158,8 +1316,8 @@ function showPage(id) {
   document.getElementById('pageTitle').innerHTML = t[0] + `<span>${t[1]}</span>`;
   if (id === 'bebidas') renderDrinks();
   if (id === 'clientes') renderClients();
-  if (id === 'transferencias') { renderTransfers(); updateTransferStats(); }
-  if (id === 'comisiones') { renderCommissions(); renderCommissionDetail(); }
+  if (id === 'transferencias') { checkAutoClose(); renderTransfers(); updateTransferStats(); }
+  if (id === 'comisiones') { checkAutoClose(); renderCommissions(); renderCommissionDetail(); }
   if (id === 'fidelidad') renderFidelidadPage();
 }
 
@@ -1189,14 +1347,14 @@ function renderDrinks() {
         <div class="drink-name">${d.name}</div>
         <div class="drink-price">$${d.price.toLocaleString('es-AR')} / unidad</div>
         <div class="drink-controls">
-          <button class="dc-btn sub" onclick="drinkSell(${i})">−</button>
+          <button type="button" class="dc-btn sub" onclick="drinkSell(${i})">−</button>
           <span class="dc-num">${d.stock}</span>
-          <button class="dc-btn add" onclick="drinkAdd(${i})">+</button>
+          <button type="button" class="dc-btn add" onclick="drinkAdd(${i})">+</button>
         </div>
         <div class="drink-bar-wrap"><div class="drink-bar" style="width:${pct}%;background:${barColor}"></div></div>
         <div class="drink-status status-${status[0]}">${status[1]} · ${d.stock}/${d.max}</div>
         ${d.soldToday > 0 ? `<div style="margin-top:0.4rem;font-size:0.55rem;color:var(--muted);">Vendidas hoy: ${d.soldToday}</div>` : ''}
-        <button class="btn btn-red" onclick="removeDrink(${i})" style="margin-top:0.8rem;width:100%;justify-content:center;">🗑 Eliminar</button>
+        <button type="button" class="btn btn-red" onclick="removeDrink(${i})" style="margin-top:0.8rem;width:100%;justify-content:center;">🗑 Eliminar</button>
       </div>`;
   });
   updateDrinkStats();
@@ -1221,11 +1379,11 @@ function drinkAdd(i) {
   renderDrinks();
 }
 function removeDrink(i) {
-  if (confirm(`¿Eliminar ${STATE.drinks[i].name} del inventario?`)) {
+  customConfirm('¿Eliminar ' + STATE.drinks[i].name + ' del inventario?', function() {
     STATE.drinks.splice(i, 1);
     save();
     renderDrinks();
-  }
+  });
 }
 function resetVentas() {
   STATE.drinks.forEach(d => d.soldToday = 0);
@@ -1366,11 +1524,11 @@ function saveClient() {
   save();
 }
 function deleteClient(i) {
-  if (confirm(`¿Eliminar a ${STATE.clients[i].nombre}?`)) {
+  customConfirm('¿Eliminar a ' + STATE.clients[i].nombre + '?', function() {
     STATE.clients.splice(i,1);
     renderClients();
     save();
-  }
+  });
 }
 function renderClients() {
   const q = (document.getElementById('clientSearch').value||'').toLowerCase();
@@ -1402,9 +1560,9 @@ function renderClients() {
         <td>${stampsDisplay}</td>
         <td style="color:var(--muted)">${created}</td>
         <td style="display:flex;gap:0.4rem;">
-          <button class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.6rem;color:var(--gold);" onclick="openClientProfile(${realIdx})">👤</button>
-          <button class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.6rem;" onclick="openClientModal(${realIdx})">✏</button>
-          <button class="btn btn-red" onclick="deleteClient(${realIdx})">🗑</button>
+          <button type="button" class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.6rem;color:var(--gold);" onclick="openClientProfile(${realIdx})">👤</button>
+          <button type="button" class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.6rem;" onclick="openClientModal(${realIdx})">✏</button>
+          <button type="button" class="btn btn-red" onclick="deleteClient(${realIdx})">🗑</button>
         </td>
       </tr>`;
     }).join('');
@@ -1455,7 +1613,7 @@ function clearTransferForm() {
   document.getElementById('transfFecha').value = now.toISOString().split('T')[0];
 }
 function deleteTransfer(id) {
-  if (confirm('¿Eliminar esta transferencia?')) {
+  customConfirm('¿Eliminar esta transferencia?', function() {
     const idx = STATE.transfers.findIndex(t => t.id===id);
     if (idx >= 0) STATE.transfers.splice(idx,1);
     renderTransfers();
@@ -1463,33 +1621,90 @@ function deleteTransfer(id) {
     renderCommissions();
     renderCommissionDetail();
     save();
-  }
+  });
 }
 function renderTransfers() {
   const q = (document.getElementById('transfSearch').value||'').toLowerCase();
-  const list = STATE.transfers.filter(t =>
+  checkAutoClose();
+
+  const allTransfers = STATE.transfers.filter(t =>
     t.remitente.toLowerCase().includes(q) ||
     (t.concepto||'').toLowerCase().includes(q) ||
     (t.barbero||'').toLowerCase().includes(q)
   );
+
   const body = document.getElementById('transfBody');
-  if (!list.length) {
-    body.innerHTML = `<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">Sin transferencias${q?' encontradas':' registradas'}.</td></tr>`;
+  if (!allTransfers.length) {
+    body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:2rem;">Sin transferencias' + (q?' encontradas':' registradas') + '.</td></tr>';
     return;
   }
-  body.innerHTML = list.map(t => {
-    const fecha = t.fecha ? new Date(t.fecha+'T00:00:00').toLocaleDateString('es-AR') : '—';
-    const barbColor = {Alex:'badge-gold',Enzo:'badge-green',Benja:'badge-blue',Braian:'badge-red'}[t.barbero] || '';
-    return `<tr>
-      <td style="color:var(--muted)">${fecha}</td>
-      <td><strong>${t.remitente}</strong></td>
-      <td style="color:var(--muted)">${t.concepto||'—'}</td>
-      <td>${t.barbero ? `<span class="badge ${barbColor}">${t.barbero}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td><span class="badge badge-blue">${t.metodo}</span></td>
-      <td><span class="transfer-amount-in">+$${t.monto.toLocaleString('es-AR')}</span></td>
-      <td><button class="btn btn-red" onclick="deleteTransfer(${t.id})">🗑</button></td>
-    </tr>`;
-  }).join('');
+
+  // Group by weekKey
+  const weekMap = new Map();
+  allTransfers.forEach(function(t) {
+    const wk = t.fecha ? getWeekKey(new Date(t.fecha+'T00:00:00')) : 'sin-fecha';
+    if (!weekMap.has(wk)) weekMap.set(wk, []);
+    weekMap.get(wk).push(t);
+  });
+
+  const currentWk = getCurrentWeekKey();
+  const sortedWeeks = Array.from(weekMap.keys()).sort(function(a, b) {
+    if (a === currentWk) return -1;
+    if (b === currentWk) return 1;
+    return b.localeCompare(a);
+  });
+
+  const barbColor = {Alex:'badge-gold',Enzo:'badge-green',Benja:'badge-blue',Braian:'badge-red'};
+  let rows = '';
+
+  sortedWeeks.forEach(function(wk) {
+    const transfers = weekMap.get(wk);
+    const isCurrent = wk === currentWk;
+    const isClosed = isWeekClosed(wk);
+    const weekTotal = transfers.reduce(function(s,t){return s+t.monto;}, 0);
+    const labelDate = wk !== 'sin-fecha' ? new Date(transfers[0].fecha+'T12:00:00') : new Date();
+    const weekLabel = wk === 'sin-fecha' ? 'Sin fecha' : getWeekLabel(labelDate);
+    const closedInfo = isClosed ? STATE.closedWeeks.find(function(cw){return cw.weekKey===wk;}) : null;
+
+    const statusBadge = isCurrent
+      ? '<span style="background:rgba(76,175,130,.15);color:#4caf82;border:1px solid rgba(76,175,130,.3);font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;margin-left:8px">&#9679; SEMANA ACTIVA</span>'
+      : isClosed
+        ? '<span style="background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25);font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;margin-left:8px">&#128274; CERRADA' + (closedInfo && closedInfo.autoClose ? ' (auto)' : '') + '</span>'
+        : '<span style="background:rgba(224,85,85,.12);color:var(--red);border:1px solid rgba(224,85,85,.25);font-size:.55rem;letter-spacing:.15em;text-transform:uppercase;padding:2px 8px;margin-left:8px">&#9888; PENDIENTE</span>';
+
+    const closeBtn = (isCurrent && !isClosed)
+      ? '<button type="button" class="btn btn-outline" onclick="closeCurrentWeek()" style="font-size:.58rem;padding:.3rem .8rem;min-height:auto">&#128274; Cerrar caja</button>'
+      : '';
+
+    rows += '<tr><td colspan="7" style="background:linear-gradient(135deg,rgba(201,168,76,.08),rgba(201,168,76,.03));border-top:2px solid rgba(201,168,76,.3);border-bottom:1px solid rgba(201,168,76,.15);padding:10px 14px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<span style="font-family:Bebas Neue,sans-serif;font-size:1rem;letter-spacing:.08em;color:var(--cream)">' + weekLabel + '</span>' +
+          statusBadge +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="font-size:.65rem;color:var(--muted)">' + transfers.length + ' transf. &middot; <strong style="color:var(--gold)">' + fmtMoney(weekTotal) + '</strong></span>' +
+          closeBtn +
+        '</div>' +
+      '</div>' +
+    '</td></tr>';
+
+    transfers.forEach(function(t) {
+      const fecha = t.fecha ? new Date(t.fecha+'T00:00:00').toLocaleDateString('es-AR') : '—';
+      const bc = barbColor[t.barbero] || '';
+      rows += '<tr style="' + (isClosed ? 'opacity:.8' : '') + '">' +
+        '<td style="color:var(--muted)">' + fecha + '</td>' +
+        '<td><strong>' + t.remitente + '</strong></td>' +
+        '<td style="color:var(--muted)">' + (t.concepto||'—') + '</td>' +
+        '<td>' + (t.barbero ? '<span class="badge ' + bc + '">' + t.barbero + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>' +
+        '<td><span class="badge badge-blue">' + t.metodo + '</span></td>' +
+        '<td><span class="transfer-amount-in">+' + fmtMoney(t.monto) + '</span></td>' +
+        '<td><button type="button" class="btn btn-red" onclick="deleteTransfer(' + t.id + ')">&#128465;</button></td>' +
+      '</tr>';
+    });
+  });
+
+  body.innerHTML = rows;
 }
 function updateTransferStats() {
   const total = STATE.transfers.reduce((s,t) => s+t.monto, 0);
@@ -1519,15 +1734,37 @@ function saveComissions() {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
   });
 }
-function getBarberTotals() {
+function getBarberTotals(weekKey) {
   const totals = { Alex:0, Enzo:0, Benja:0, Braian:0 };
-  STATE.transfers.filter(t => t.barbero).forEach(t => {
+  let transfers = STATE.transfers.filter(t => t.barbero);
+  if (weekKey) {
+    transfers = transfers.filter(t => t.fecha && getWeekKey(new Date(t.fecha+'T00:00:00')) === weekKey);
+  }
+  transfers.forEach(t => {
     if (totals[t.barbero] !== undefined) totals[t.barbero] += t.monto;
   });
   return totals;
 }
 function renderCommissions() {
-  const totals = getBarberTotals();
+  // Populate week filter select
+  const weekSel = document.getElementById('filterWeek');
+  if (weekSel) {
+    const currentWk = getCurrentWeekKey();
+    const weekKeys = [...new Set(
+      STATE.transfers.filter(t=>t.fecha).map(t=>getWeekKey(new Date(t.fecha+'T00:00:00')))
+    )].sort((a,b)=>b.localeCompare(a));
+    const selectedWk = weekSel.value;
+    weekSel.innerHTML = '<option value="">Todas las semanas</option>' +
+      weekKeys.map(wk => {
+        const label = getWeekLabel(new Date(STATE.transfers.find(t=>t.fecha&&getWeekKey(new Date(t.fecha+'T00:00:00'))===wk).fecha+'T12:00:00'));
+        const isClosed = isWeekClosed(wk);
+        const badge = wk===currentWk ? ' ● Activa' : isClosed ? ' 🔒' : '';
+        return '<option value="' + wk + '"' + (selectedWk===wk?' selected':'') + '>' + label + badge + '</option>';
+      }).join('');
+  }
+
+  const filterWk = weekSel ? weekSel.value : '';
+  const totals = getBarberTotals(filterWk || null);
   const cards = document.getElementById('commissionCards');
   const barbers = ['Alex','Enzo','Benja','Braian'];
   const maxTotal = Math.max(...Object.values(totals), 1);
@@ -1565,34 +1802,71 @@ function renderCommissions() {
 }
 function renderCommissionDetail() {
   const filter = document.getElementById('filterBarbero').value;
-  const list = STATE.transfers.filter(t => t.barbero && (!filter || t.barbero===filter));
+  const weekFilter = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : '';
+  const list = STATE.transfers.filter(t => {
+    if (!t.barbero) return false;
+    if (filter && t.barbero !== filter) return false;
+    if (weekFilter && t.fecha && getWeekKey(new Date(t.fecha+'T00:00:00')) !== weekFilter) return false;
+    return true;
+  });
   const body = document.getElementById('commissionDetailBody');
   if (!list.length) {
     body.innerHTML = `<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Sin registros${filter?' para '+filter:''}.</td></tr>`;
     return;
   }
-  body.innerHTML = list.map(t => {
-    const pct = STATE.commissions[t.barbero] || 50;
-    const comis = Math.round(t.monto * pct / 100);
-    const key = t.barbero + '-' + t.id;
-    const paid = STATE.paidMap[key] ? true : false;
-    const fecha = t.fecha ? new Date(t.fecha+'T00:00:00').toLocaleDateString('es-AR') : '—';
-    return `<tr>
-      <td style="color:var(--muted)">${fecha}</td>
-      <td>${t.remitente}</td>
-      <td style="color:var(--muted)">${t.concepto||'—'}</td>
-      <td><span class="badge badge-gold">${t.barbero}</span></td>
-      <td>$${t.monto.toLocaleString('es-AR')}</td>
-      <td style="color:var(--muted)">${pct}%</td>
-      <td style="color:var(--gold)"><strong>$${comis.toLocaleString('es-AR')}</strong></td>
-      <td>
-        ${paid
-          ? `<span class="badge badge-green">✓ Pagado</span>`
-          : `<button class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.7rem;" onclick="openPayModal('${key}',${comis},'${t.barbero}')">Marcar pagado</button>`
-        }
-      </td>
-    </tr>`;
-  }).join('');
+  // Group by week for rendering
+  const wkMap = new Map();
+  list.forEach(t => {
+    const wk = t.fecha ? getWeekKey(new Date(t.fecha+'T00:00:00')) : 'sin-fecha';
+    if (!wkMap.has(wk)) wkMap.set(wk, []);
+    wkMap.get(wk).push(t);
+  });
+  const currentWk2 = getCurrentWeekKey();
+  const sortedWks = Array.from(wkMap.keys()).sort((a,b) => {
+    if (a===currentWk2) return -1; if (b===currentWk2) return 1; return b.localeCompare(a);
+  });
+
+  let rows = '';
+  sortedWks.forEach(wk => {
+    const wkTransfers = wkMap.get(wk);
+    const isClosed2 = isWeekClosed(wk);
+    const wkLabel = wk==='sin-fecha' ? 'Sin fecha' : getWeekLabel(new Date(wkTransfers[0].fecha+'T12:00:00'));
+    const wkTotal = wkTransfers.reduce((s,t)=>s+t.monto,0);
+    const wkComis = wkTransfers.reduce((s,t)=>s+Math.round(t.monto*(STATE.commissions[t.barbero]||50)/100),0);
+    const statusColor = (wk===currentWk2) ? '#4caf82' : isClosed2 ? 'var(--gold)' : 'var(--red)';
+    const statusTxt   = (wk===currentWk2) ? '● Activa' : isClosed2 ? '🔒 Cerrada' : '⚠ Pendiente';
+    rows += '<tr><td colspan="8" style="background:linear-gradient(135deg,rgba(201,168,76,.07),rgba(201,168,76,.02));border-top:2px solid rgba(201,168,76,.28);border-bottom:1px solid rgba(201,168,76,.12);padding:8px 12px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-family:Bebas Neue,sans-serif;font-size:.95rem;color:var(--cream)">' + wkLabel + '</span>' +
+          '<span style="font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:' + statusColor + '">' + statusTxt + '</span>' +
+        '</div>' +
+        '<span style="font-size:.65rem;color:var(--muted)">' + wkTransfers.length + ' servicios &middot; Total: <strong style="color:var(--gold)">' + fmtMoney(wkTotal) + '</strong> &middot; Comis: <strong style="color:#4caf82">' + fmtMoney(wkComis) + '</strong></span>' +
+      '</div>' +
+    '</td></tr>';
+
+    wkTransfers.forEach(t => {
+      const pct = STATE.commissions[t.barbero] || 50;
+      const comis = Math.round(t.monto * pct / 100);
+      const key = t.barbero + '-' + t.id;
+      const paid = STATE.paidMap[key] ? true : false;
+      const fecha = t.fecha ? new Date(t.fecha+'T00:00:00').toLocaleDateString('es-AR') : '—';
+      rows += '<tr style="' + (isClosed2?'opacity:.8':'') + '">' +
+        '<td style="color:var(--muted)">' + fecha + '</td>' +
+        '<td>' + t.remitente + '</td>' +
+        '<td style="color:var(--muted)">' + (t.concepto||'—') + '</td>' +
+        '<td><span class="badge badge-gold">' + t.barbero + '</span></td>' +
+        '<td>$' + t.monto.toLocaleString('es-AR') + '</td>' +
+        '<td style="color:var(--muted)">' + pct + '%</td>' +
+        '<td style="color:var(--gold)"><strong>$' + comis.toLocaleString('es-AR') + '</strong></td>' +
+        '<td>' + (paid
+          ? '<span class="badge badge-green">&#10003; Pagado</span>'
+          : '<button type="button" class="btn btn-outline" style="font-size:0.58rem;padding:0.3rem 0.7rem;" onclick="openPayModal(&quot;'+key+'&quot;,'+comis+',&quot;'+t.barbero+'&quot;)">Marcar pagado</button>'
+        ) + '</td>' +
+      '</tr>';
+    });
+  });
+  body.innerHTML = rows;
 }
 function openPayModal(key, amount, barbero) {
   STATE.pendingPayIdx = key;
@@ -1627,6 +1901,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
+checkAutoClose();
 renderDrinks();
 renderLog();
 renderClients();
@@ -1730,7 +2005,7 @@ function renderLoyaltyCard(idx) {
         <div class="loyalty-complete-text">🎉 CORTE GRATIS DISPONIBLE</div>
         <div class="loyalty-complete-sub">El cliente completó su tarjeta · Listo para canjear</div>
       </div>
-      <button class="btn-redeem" onclick="redeemFreecut(${idx})">Canjear Corte Gratis</button>
+      <button type="button" class="btn-redeem" onclick="redeemFreecut(${idx})">Canjear Corte Gratis</button>
     </div>` : '';
 
   const createdDate = new Date(c.createdAt).toLocaleDateString('es-AR');
@@ -1852,7 +2127,9 @@ function renderServiceHistory(idx) {
 
 // ── Redeem free cut
 function redeemFreecut(idx) {
-  if (!confirm('¿Confirmar canje del corte gratis?')) return;
+  customConfirm('¿Confirmar canje del corte gratis?', function() { redeemFreecutConfirmed(idx); });
+}
+function redeemFreecutConfirmed(idx) {
   const c = STATE.clients[idx];
   const loy = getLoyalty(c);
   loy.history.push({
@@ -1926,7 +2203,7 @@ function renderFidelidadPage() {
       </div>
       <div style="display:flex;align-items:center;gap:0.8rem;">
         <span class="badge badge-gold">Tarjeta Completa</span>
-        <button class="btn-redeem" style="font-size:0.58rem;padding:0.4rem 0.9rem;" onclick="openClientProfile(${r.i})">Ver Tarjeta</button>
+        <button type="button" class="btn-redeem" style="font-size:0.58rem;padding:0.4rem 0.9rem;" onclick="openClientProfile(${r.i})">Ver Tarjeta</button>
       </div>
     </div>`).join('');
 
@@ -1988,6 +2265,48 @@ function autoFillMonto(val) {
   }
 }
 
+
+function clearAllData() {
+  customConfirm('¿Borrar todos los datos? Esta acción no se puede deshacer.', function() {
+    localStorage.removeItem('icazz_state');
+    location.reload();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// CUSTOM CONFIRM — iOS-safe replacement for confirm()
+// ══════════════════════════════════════════════════════════════
+var _confirmCallback = null;
+
+function customConfirm(msg, onYes) {
+  _confirmCallback = onYes;
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('confirmYes').addEventListener('click', function() {
+    document.getElementById('confirmModal').style.display = 'none';
+    if (_confirmCallback) { var cb = _confirmCallback; _confirmCallback = null; cb(); }
+  });
+  document.getElementById('confirmNo').addEventListener('click', function() {
+    document.getElementById('confirmModal').style.display = 'none';
+    _confirmCallback = null;
+  });
+});
+
 </script>
+
+<!-- ═══ CONFIRM MODAL ═══ -->
+<div class="modal-overlay" id="confirmModal" style="display:none;z-index:999;">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <p id="confirmMsg" style="font-size:0.85rem;color:var(--cream);margin-bottom:1.5rem;line-height:1.6;padding-top:0.5rem;"></p>
+    <div style="display:flex;gap:0.8rem;justify-content:center;">
+      <button type="button" id="confirmYes" class="btn btn-gold">Confirmar</button>
+      <button type="button" id="confirmNo" class="btn btn-outline">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
