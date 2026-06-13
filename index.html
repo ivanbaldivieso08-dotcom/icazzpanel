@@ -886,7 +886,7 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <span class="card-title">Detalle de Transacciones por Barbero</span>
         <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
           <div style="display:flex;align-items:center;gap:0.4rem;">
-            <label style="white-space:nowrap;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">Semana:</label>
+            <label style="white-space:nowrap;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);">Mes:</label>
             <select id="filterWeek" onchange="renderCommissions();renderCommissionDetail();" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;"></select>
           </div>
           <div style="display:flex;align-items:center;gap:0.4rem;">
@@ -1244,6 +1244,24 @@ function doCloseWeek() {
   renderCommissions();
   renderCommissionDetail();
   alert('✓ Caja cerrada correctamente.');
+}
+
+
+// ── Month helpers for commissions ────────────────────────────
+function getMonthKey(date) {
+  // Returns 'YYYY-MM'
+  const d = new Date(date);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function getMonthLabel(monthKey) {
+  // Returns 'Junio 2025'
+  const [y, m] = monthKey.split('-');
+  const d = new Date(parseInt(y), parseInt(m)-1, 1);
+  return d.toLocaleDateString('es-AR', {month:'long', year:'numeric'})
+    .replace(/^\w/, c => c.toUpperCase());
+}
+function getCurrentMonthKey() {
+  return getMonthKey(new Date());
 }
 
 /** Format money */
@@ -1734,11 +1752,11 @@ function saveComissions() {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
   });
 }
-function getBarberTotals(weekKey) {
+function getBarberTotals(monthKey) {
   const totals = { Alex:0, Enzo:0, Benja:0, Braian:0 };
   let transfers = STATE.transfers.filter(t => t.barbero);
-  if (weekKey) {
-    transfers = transfers.filter(t => t.fecha && getWeekKey(new Date(t.fecha+'T00:00:00')) === weekKey);
+  if (monthKey) {
+    transfers = transfers.filter(t => t.fecha && getMonthKey(new Date(t.fecha+'T00:00:00')) === monthKey);
   }
   transfers.forEach(t => {
     if (totals[t.barbero] !== undefined) totals[t.barbero] += t.monto;
@@ -1746,25 +1764,25 @@ function getBarberTotals(weekKey) {
   return totals;
 }
 function renderCommissions() {
-  // Populate week filter select
+  // Populate MONTH filter select
   const weekSel = document.getElementById('filterWeek');
   if (weekSel) {
-    const currentWk = getCurrentWeekKey();
-    const weekKeys = [...new Set(
-      STATE.transfers.filter(t=>t.fecha).map(t=>getWeekKey(new Date(t.fecha+'T00:00:00')))
+    const currentMk = getCurrentMonthKey();
+    const monthKeys = [...new Set(
+      STATE.transfers.filter(t=>t.fecha).map(t=>getMonthKey(new Date(t.fecha+'T00:00:00')))
     )].sort((a,b)=>b.localeCompare(a));
-    const selectedWk = weekSel.value;
-    weekSel.innerHTML = '<option value="">Todas las semanas</option>' +
-      weekKeys.map(wk => {
-        const label = getWeekLabel(new Date(STATE.transfers.find(t=>t.fecha&&getWeekKey(new Date(t.fecha+'T00:00:00'))===wk).fecha+'T12:00:00'));
-        const isClosed = isWeekClosed(wk);
-        const badge = wk===currentWk ? ' ● Activa' : isClosed ? ' 🔒' : '';
-        return '<option value="' + wk + '"' + (selectedWk===wk?' selected':'') + '>' + label + badge + '</option>';
+    const selectedMk = weekSel.value;
+    weekSel.innerHTML = '<option value="">Todos los meses</option>' +
+      monthKeys.map(mk => {
+        const label = getMonthLabel(mk);
+        const isCurrent = mk === currentMk;
+        const badge = isCurrent ? ' ● Actual' : '';
+        return '<option value="' + mk + '"' + (selectedMk===mk?' selected':'') + '>' + label + badge + '</option>';
       }).join('');
   }
 
-  const filterWk = weekSel ? weekSel.value : '';
-  const totals = getBarberTotals(filterWk || null);
+  const filterMk = weekSel ? weekSel.value : '';
+  const totals = getBarberTotals(filterMk || null);
   const cards = document.getElementById('commissionCards');
   const barbers = ['Alex','Enzo','Benja','Braian'];
   const maxTotal = Math.max(...Object.values(totals), 1);
@@ -1802,56 +1820,60 @@ function renderCommissions() {
 }
 function renderCommissionDetail() {
   const filter = document.getElementById('filterBarbero').value;
-  const weekFilter = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : '';
+  const monthFilter = document.getElementById('filterWeek') ? document.getElementById('filterWeek').value : '';
   const list = STATE.transfers.filter(t => {
     if (!t.barbero) return false;
     if (filter && t.barbero !== filter) return false;
-    if (weekFilter && t.fecha && getWeekKey(new Date(t.fecha+'T00:00:00')) !== weekFilter) return false;
+    if (monthFilter && t.fecha && getMonthKey(new Date(t.fecha+'T00:00:00')) !== monthFilter) return false;
     return true;
   });
   const body = document.getElementById('commissionDetailBody');
   if (!list.length) {
-    body.innerHTML = `<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Sin registros${filter?' para '+filter:''}.</td></tr>`;
+    body.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:2rem;">Sin registros' + (filter?' para '+filter:'') + '.</td></tr>';
     return;
   }
-  // Group by week for rendering
-  const wkMap = new Map();
+
+  // Group by month
+  const mkMap = new Map();
   list.forEach(t => {
-    const wk = t.fecha ? getWeekKey(new Date(t.fecha+'T00:00:00')) : 'sin-fecha';
-    if (!wkMap.has(wk)) wkMap.set(wk, []);
-    wkMap.get(wk).push(t);
+    const mk = t.fecha ? getMonthKey(new Date(t.fecha+'T00:00:00')) : 'sin-fecha';
+    if (!mkMap.has(mk)) mkMap.set(mk, []);
+    mkMap.get(mk).push(t);
   });
-  const currentWk2 = getCurrentWeekKey();
-  const sortedWks = Array.from(wkMap.keys()).sort((a,b) => {
-    if (a===currentWk2) return -1; if (b===currentWk2) return 1; return b.localeCompare(a);
+  const currentMk = getCurrentMonthKey();
+  const sortedMks = Array.from(mkMap.keys()).sort((a,b) => {
+    if (a===currentMk) return -1;
+    if (b===currentMk) return 1;
+    return b.localeCompare(a);
   });
 
   let rows = '';
-  sortedWks.forEach(wk => {
-    const wkTransfers = wkMap.get(wk);
-    const isClosed2 = isWeekClosed(wk);
-    const wkLabel = wk==='sin-fecha' ? 'Sin fecha' : getWeekLabel(new Date(wkTransfers[0].fecha+'T12:00:00'));
-    const wkTotal = wkTransfers.reduce((s,t)=>s+t.monto,0);
-    const wkComis = wkTransfers.reduce((s,t)=>s+Math.round(t.monto*(STATE.commissions[t.barbero]||50)/100),0);
-    const statusColor = (wk===currentWk2) ? '#4caf82' : isClosed2 ? 'var(--gold)' : 'var(--red)';
-    const statusTxt   = (wk===currentWk2) ? '● Activa' : isClosed2 ? '🔒 Cerrada' : '⚠ Pendiente';
+  sortedMks.forEach(mk => {
+    const mkTransfers = mkMap.get(mk);
+    const isCurrent = mk === currentMk;
+    const mkLabel = mk==='sin-fecha' ? 'Sin fecha' : getMonthLabel(mk);
+    const mkTotal = mkTransfers.reduce((s,t)=>s+t.monto, 0);
+    const mkComis = mkTransfers.reduce((s,t)=>s+Math.round(t.monto*(STATE.commissions[t.barbero]||50)/100), 0);
+    const statusColor = isCurrent ? '#4caf82' : 'var(--gold)';
+    const statusTxt   = isCurrent ? '● Mes actual' : '✓ Cerrado';
+
     rows += '<tr><td colspan="8" style="background:linear-gradient(135deg,rgba(201,168,76,.07),rgba(201,168,76,.02));border-top:2px solid rgba(201,168,76,.28);border-bottom:1px solid rgba(201,168,76,.12);padding:8px 12px;">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">' +
         '<div style="display:flex;align-items:center;gap:8px">' +
-          '<span style="font-family:Bebas Neue,sans-serif;font-size:.95rem;color:var(--cream)">' + wkLabel + '</span>' +
+          '<span style="font-family:Bebas Neue,sans-serif;font-size:1rem;color:var(--cream)">' + mkLabel + '</span>' +
           '<span style="font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:' + statusColor + '">' + statusTxt + '</span>' +
         '</div>' +
-        '<span style="font-size:.65rem;color:var(--muted)">' + wkTransfers.length + ' servicios &middot; Total: <strong style="color:var(--gold)">' + fmtMoney(wkTotal) + '</strong> &middot; Comis: <strong style="color:#4caf82">' + fmtMoney(wkComis) + '</strong></span>' +
+        '<span style="font-size:.65rem;color:var(--muted)">' + mkTransfers.length + ' servicios &middot; Total: <strong style="color:var(--gold)">' + fmtMoney(mkTotal) + '</strong> &middot; Comis: <strong style="color:#4caf82">' + fmtMoney(mkComis) + '</strong></span>' +
       '</div>' +
     '</td></tr>';
 
-    wkTransfers.forEach(t => {
+    mkTransfers.forEach(t => {
       const pct = STATE.commissions[t.barbero] || 50;
       const comis = Math.round(t.monto * pct / 100);
       const key = t.barbero + '-' + t.id;
       const paid = STATE.paidMap[key] ? true : false;
       const fecha = t.fecha ? new Date(t.fecha+'T00:00:00').toLocaleDateString('es-AR') : '—';
-      rows += '<tr style="' + (isClosed2?'opacity:.8':'') + '">' +
+      rows += '<tr>' +
         '<td style="color:var(--muted)">' + fecha + '</td>' +
         '<td>' + t.remitente + '</td>' +
         '<td style="color:var(--muted)">' + (t.concepto||'—') + '</td>' +
