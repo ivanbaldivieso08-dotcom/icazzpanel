@@ -663,10 +663,10 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="stat-val" id="statNuevosMes">0</div>
         <div class="stat-sub">clientes</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="openBirthdayModal()" style="cursor:pointer;transition:border-color .2s;" onmouseenter="this.style.borderColor='rgba(201,168,76,0.4)'" onmouseleave="this.style.borderColor=''">
         <div class="stat-label">Cumpleaños próximos</div>
         <div class="stat-val" id="statCumples">0</div>
-        <div class="stat-sub">esta semana</div>
+        <div class="stat-sub">esta semana · <span style="color:var(--gold);font-size:0.55rem;">ver lista →</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Último registro</div>
@@ -775,7 +775,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <select id="transfBarbero">
               <option value="">— Sin asignar —</option>
               <option value="Alex">Alex</option>
-              <option value="Enzo">Enzo</option>
               <option value="Benja">Benja</option>
               <option value="Braian">Braian</option>
             </select>
@@ -862,10 +861,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <input type="number" id="pct-Alex" value="50" min="0" max="100">
           </div>
           <div class="form-group">
-            <label>Enzo (%)</label>
-            <input type="number" id="pct-Enzo" value="50" min="0" max="100">
-          </div>
-          <div class="form-group">
             <label>Benja (%)</label>
             <input type="number" id="pct-Benja" value="50" min="0" max="100">
           </div>
@@ -894,7 +889,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <select id="filterBarbero" onchange="renderCommissionDetail()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;">
               <option value="">Todos</option>
               <option value="Alex">Alex</option>
-              <option value="Enzo">Enzo</option>
               <option value="Benja">Benja</option>
               <option value="Braian">Braian</option>
             </select>
@@ -1034,7 +1028,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         </select>
         <select id="svcBarbero">
           <option value="Alex">Alex</option>
-          <option value="Enzo">Enzo</option>
           <option value="Benja">Benja</option>
           <option value="Braian">Braian</option>
         </select>
@@ -1098,7 +1091,7 @@ const STATE = {
   // loyalty[clientId] = { stamps: N, history: [{date,service,type}], freeCount: N, pendingFree: bool }
   loyalty: {},
   transfers: [],
-  commissions: { Alex:50, Enzo:50, Benja:50, Braian:50 },
+  commissions: { Alex:50, Benja:50, Braian:50 },
   paidMap: {},
   pendingPayIdx: null,
   closedWeeks: [],    // array of { weekKey, label, startDate, endDate, closedAt }
@@ -1672,7 +1665,7 @@ function renderTransfers() {
     return b.localeCompare(a);
   });
 
-  const barbColor = {Alex:'badge-gold',Enzo:'badge-green',Benja:'badge-blue',Braian:'badge-red'};
+  const barbColor = {Alex:'badge-gold',Benja:'badge-blue',Braian:'badge-red'};
   let rows = '';
 
   sortedWeeks.forEach(function(wk) {
@@ -1740,7 +1733,7 @@ function updateTransferStats() {
 // COMISIONES
 // ══════════════════════════════════════════
 function saveComissions() {
-  ['Alex','Enzo','Benja','Braian'].forEach(b => {
+  ['Alex','Benja','Braian'].forEach(b => {
     const v = parseInt(document.getElementById('pct-'+b).value);
     if (!isNaN(v) && v >= 0 && v <= 100) STATE.commissions[b] = v;
   });
@@ -1748,12 +1741,12 @@ function saveComissions() {
   renderCommissionDetail();
   save();
   // Sync inputs
-  ['Alex','Enzo','Benja','Braian'].forEach(b => {
+  ['Alex','Benja','Braian'].forEach(b => {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
   });
 }
 function getBarberTotals(monthKey) {
-  const totals = { Alex:0, Enzo:0, Benja:0, Braian:0 };
+  const totals = { Alex:0, Benja:0, Braian:0 };
   let transfers = STATE.transfers.filter(t => t.barbero);
   if (monthKey) {
     transfers = transfers.filter(t => t.fecha && getMonthKey(new Date(t.fecha+'T00:00:00')) === monthKey);
@@ -1784,7 +1777,7 @@ function renderCommissions() {
   const filterMk = weekSel ? weekSel.value : '';
   const totals = getBarberTotals(filterMk || null);
   const cards = document.getElementById('commissionCards');
-  const barbers = ['Alex','Enzo','Benja','Braian'];
+  const barbers = ['Alex','Benja','Braian'];
   const maxTotal = Math.max(...Object.values(totals), 1);
   let totalComis = 0;
   barbers.forEach(b => { totalComis += totals[b] * STATE.commissions[b] / 100; });
@@ -1935,7 +1928,7 @@ renderCommissionDetail();
 STATE.clients.forEach(c => { if (!STATE.loyalty[c.createdAt]) STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false }; });
 
 // Load commission pct inputs
-['Alex','Enzo','Benja','Braian'].forEach(b => {
+['Alex','Benja','Braian'].forEach(b => {
   const el = document.getElementById('pct-'+b);
   if (el) el.value = STATE.commissions[b];
 });
@@ -2288,6 +2281,53 @@ function autoFillMonto(val) {
 }
 
 
+function openBirthdayModal() {
+  const upcoming = STATE.clients
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => isUpcomingBirthday(c.dob))
+    .sort((a, b) => {
+      const now = new Date();
+      const daysUntil = dob => {
+        const d = new Date(dob);
+        const next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+        return Math.round((next - now) / (1000*60*60*24));
+      };
+      return daysUntil(a.c.dob) - daysUntil(b.c.dob);
+    });
+
+  const body = document.getElementById('birthdayModalBody');
+
+  if (!upcoming.length) {
+    body.innerHTML = '<div style="padding:1.5rem;text-align:center;color:var(--muted);font-size:0.75rem;">Ningún cliente cumple años en los próximos 7 días.</div>';
+  } else {
+    const now = new Date();
+    body.innerHTML = upcoming.map(({ c, i }) => {
+      const d = new Date(c.dob);
+      const next = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+      const days = Math.round((next - now) / (1000*60*60*24));
+      const age = calcAge(c.dob) + 1;
+      const dayLabel = days === 0 ? '<span style="color:var(--gold);font-weight:bold;">¡HOY! 🎉</span>'
+                     : days === 1 ? '<span style="color:#f0a000;">Mañana</span>'
+                     : `<span style="color:var(--muted);">En ${days} días</span>`;
+      const fechaStr = next.toLocaleDateString('es-AR', { day:'numeric', month:'long' });
+      return `<div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div>
+          <div style="font-size:0.85rem;color:var(--cream);font-weight:bold;">${c.nombre}</div>
+          <div style="font-size:0.62rem;color:var(--muted);margin-top:2px;">${fechaStr} · Cumple ${age} años · ${c.tel}</div>
+        </div>
+        <div style="text-align:right;min-width:80px;">
+          ${dayLabel}
+          <div style="margin-top:4px;">
+            <button type="button" class="btn btn-outline" style="font-size:0.55rem;padding:0.3rem 0.7rem;min-height:32px;" onclick="document.getElementById('birthdayModal').style.display='none';openClientProfile(${i})">Ver perfil</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('birthdayModal').style.display = 'flex';
+}
+
 function clearAllData() {
   customConfirm('¿Borrar todos los datos? Esta acción no se puede deshacer.', function() {
     localStorage.removeItem('icazz_state');
@@ -2318,6 +2358,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
+
+<!-- ═══ BIRTHDAY MODAL ═══ -->
+<div class="modal-overlay" id="birthdayModal" style="display:none;z-index:600;">
+  <div class="modal" style="max-width:480px;">
+    <button type="button" class="modal-close" onclick="document.getElementById('birthdayModal').style.display='none'">✕</button>
+    <div class="modal-title">🎂 Cumpleaños Esta Semana</div>
+    <div id="birthdayModalBody" style="padding-bottom:0.5rem;"></div>
+  </div>
+</div>
 
 <!-- ═══ CONFIRM MODAL ═══ -->
 <div class="modal-overlay" id="confirmModal" style="display:none;z-index:999;">
