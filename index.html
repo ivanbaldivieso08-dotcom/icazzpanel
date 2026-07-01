@@ -663,10 +663,14 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <div class="stat-val" id="statNuevosMes">0</div>
         <div class="stat-sub">clientes</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" id="statCumpleCard"
+           onclick="openCumpleModal()"
+           style="cursor:pointer;transition:border-color .2s,box-shadow .2s;"
+           onmouseenter="this.style.borderColor='var(--gold)';this.style.boxShadow='0 0 0 1px rgba(201,168,76,.3)'"
+           onmouseleave="this.style.borderColor='';this.style.boxShadow=''">
         <div class="stat-label">Cumpleaños próximos</div>
         <div class="stat-val" id="statCumples">0</div>
-        <div class="stat-sub">esta semana</div>
+        <div class="stat-sub">esta semana · <span style="color:var(--gold);font-size:.55rem">ver →</span></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Último registro</div>
@@ -775,7 +779,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <select id="transfBarbero">
               <option value="">— Sin asignar —</option>
               <option value="Alex">Alex</option>
-              <option value="Enzo">Enzo</option>
               <option value="Benja">Benja</option>
               <option value="Braian">Braian</option>
             </select>
@@ -856,15 +859,12 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         <button type="button" class="btn btn-gold" onclick="saveComissions()">Guardar</button>
       </div>
       <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
           <div class="form-group">
             <label>Alex (%)</label>
             <input type="number" id="pct-Alex" value="50" min="0" max="100">
           </div>
-          <div class="form-group">
-            <label>Enzo (%)</label>
-            <input type="number" id="pct-Enzo" value="50" min="0" max="100">
-          </div>
+
           <div class="form-group">
             <label>Benja (%)</label>
             <input type="number" id="pct-Benja" value="50" min="0" max="100">
@@ -913,7 +913,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
             <select id="filterBarbero" onchange="renderCommissionDetail()" style="background:var(--surface2);border:1px solid var(--border2);color:var(--cream);font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.35rem 0.6rem;outline:none;">
               <option value="">Todos</option>
               <option value="Alex">Alex</option>
-              <option value="Enzo">Enzo</option>
               <option value="Benja">Benja</option>
               <option value="Braian">Braian</option>
             </select>
@@ -1053,7 +1052,6 @@ tr:hover td { background:rgba(255,255,255,0.02); }
         </select>
         <select id="svcBarbero">
           <option value="Alex">Alex</option>
-          <option value="Enzo">Enzo</option>
           <option value="Benja">Benja</option>
           <option value="Braian">Braian</option>
         </select>
@@ -1117,7 +1115,7 @@ const STATE = {
   // loyalty[clientId] = { stamps: N, history: [{date,service,type}], freeCount: N, pendingFree: bool }
   loyalty: {},
   transfers: [],
-  commissions: { Alex:50, Enzo:50, Benja:50, Braian:50 },
+  commissions: { Alex:50, Benja:50, Braian:50 },
   paidMap: {},
   pendingPayIdx: null,
   closedWeeks: [],    // array of { weekKey, label, startDate, endDate, closedAt }
@@ -1693,7 +1691,7 @@ function renderTransfers() {
     return b.localeCompare(a);
   });
 
-  const barbColor = {Alex:'badge-gold',Enzo:'badge-green',Benja:'badge-blue',Braian:'badge-red'};
+  const barbColor = {Alex:'badge-gold',Benja:'badge-blue',Braian:'badge-red'};
   let rows = '';
 
   sortedWeeks.forEach(function(wk) {
@@ -1763,7 +1761,7 @@ function updateTransferStats() {
 // COMISIONES
 // ══════════════════════════════════════════
 function saveComissions() {
-  ['Alex','Enzo','Benja','Braian'].forEach(b => {
+  ['Alex','Benja','Braian'].forEach(b => {
     const v = parseInt(document.getElementById('pct-'+b).value);
     if (!isNaN(v) && v >= 0 && v <= 100) STATE.commissions[b] = v;
   });
@@ -1771,7 +1769,7 @@ function saveComissions() {
   renderCommissionDetail();
   save();
   // Sync inputs
-  ['Alex','Enzo','Benja','Braian'].forEach(b => {
+  ['Alex','Benja','Braian'].forEach(b => {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
   });
 }
@@ -1821,7 +1819,7 @@ function getBarberTotals(periodKey) {
   // periodKey = value of filterWeek select (day/week/month key depending on period)
   const period = (document.getElementById('filterPeriod') || {value:'mes'}).value || 'mes';
   const metodo = (document.getElementById('filterMetodo') || {value:''}).value || '';
-  const totals = { Alex:0, Enzo:0, Benja:0, Braian:0 };
+  const totals = { Alex:0, Benja:0, Braian:0 };
   let transfers = STATE.transfers.filter(t => t.barbero);
   if (periodKey) {
     transfers = transfers.filter(t => t.fecha && getPeriodKey(t.fecha, period) === periodKey);
@@ -1857,7 +1855,7 @@ function renderCommissions() {
   const filterPk = weekSel ? weekSel.value : '';
   const totals = getBarberTotals(filterPk || null);
   const cards = document.getElementById('commissionCards');
-  const barbers = ['Alex','Enzo','Benja','Braian'];
+  const barbers = ['Alex','Benja','Braian'];
   const maxTotal = Math.max(...Object.values(totals), 1);
   let totalComis = 0;
   barbers.forEach(b => { totalComis += totals[b] * STATE.commissions[b] / 100; });
@@ -2013,7 +2011,7 @@ renderCommissionDetail();
 STATE.clients.forEach(c => { if (!STATE.loyalty[c.createdAt]) STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false }; });
 
 // Load commission pct inputs
-['Alex','Enzo','Benja','Braian'].forEach(b => {
+['Alex','Benja','Braian'].forEach(b => {
   const el = document.getElementById('pct-'+b);
   if (el) el.value = STATE.commissions[b];
 });
@@ -2438,6 +2436,60 @@ function scheduleDailyClose() {
   }, ms);
 }
 
+
+// ── Modal de Cumpleaños próximos ─────────────────────────────
+function openCumpleModal() {
+  const upcoming = STATE.clients.filter(c => c.dob && isUpcomingBirthday(c.dob));
+  const container = document.getElementById('cumpleList');
+
+  if (!upcoming.length) {
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1.5rem;font-size:.8rem;">No hay cumpleaños en los próximos 7 días.</p>';
+  } else {
+    // Sort by days remaining (closest first)
+    const withDays = upcoming.map(c => {
+      const d = new Date(c.dob);
+      const now = new Date();
+      const thisYear = new Date(now.getFullYear(), d.getMonth(), d.getDate());
+      const days = Math.round((thisYear - now) / (1000*60*60*24));
+      return { c, days };
+    }).sort((a, b) => a.days - b.days);
+
+    container.innerHTML = withDays.map(({ c, days }) => {
+      const age = calcAge(c.dob);
+      const dob = new Date(c.dob + 'T12:00:00');
+      const dobStr = dob.toLocaleDateString('es-AR', { day:'numeric', month:'long' });
+      const ageNext = (typeof age === 'number') ? age + 1 : '—';
+      const daysLabel = days === 0 ? '¡Hoy!' : days === 1 ? 'Mañana' : 'En ' + days + ' días';
+      const daysColor = days === 0 ? '#4caf82' : days <= 2 ? 'var(--gold)' : 'var(--cream)';
+
+      return `<div style="
+        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+        padding:12px 14px;margin-bottom:8px;
+        background:var(--surface2);border:1px solid var(--border2);
+        border-left:3px solid var(--gold);
+      ">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:.85rem;color:var(--cream);font-weight:600;">${c.nombre}</span>
+          <span style="font-size:.65rem;color:var(--muted);">DNI: ${c.dni || '—'} &nbsp;·&nbsp; Tel: ${c.tel || '—'}</span>
+          <span style="font-size:.65rem;color:var(--muted);">Nace: ${dobStr} &nbsp;·&nbsp; Cumple ${ageNext} años</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <span style="font-size:.7rem;font-weight:700;color:${daysColor};">${daysLabel}</span>
+          ${c.tel
+            ? `<a href="https://wa.me/${c.tel.replace(/\D/g,'')}" target="_blank"
+                style="font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
+                       color:var(--gold);border:1px solid rgba(201,168,76,.4);
+                       padding:2px 8px;text-decoration:none;"
+              >💬 Saludar</a>`
+            : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  openModal('cumpleModal');
+}
+
 // ══════════════════════════════════════════════════════════════
 // CUSTOM CONFIRM — iOS-safe replacement for confirm()
 // ══════════════════════════════════════════════════════════════
@@ -2470,6 +2522,17 @@ document.addEventListener('DOMContentLoaded', function() {
       <button type="button" id="confirmYes" class="btn btn-gold">Confirmar</button>
       <button type="button" id="confirmNo" class="btn btn-outline">Cancelar</button>
     </div>
+  </div>
+</div>
+
+
+<!-- ═══ CUMPLEAÑOS MODAL ═══ -->
+<div class="modal-overlay" id="cumpleModal" style="z-index:998;">
+  <div class="modal" style="max-width:520px;">
+    <button type="button" class="modal-close" onclick="closeModal('cumpleModal')">✕</button>
+    <div class="modal-title">🎂 Cumpleaños Próximos</div>
+    <p style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.2rem;">Clientes con cumpleaños en los próximos 7 días</p>
+    <div id="cumpleList"></div>
   </div>
 </div>
 
