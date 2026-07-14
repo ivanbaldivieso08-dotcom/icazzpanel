@@ -1791,8 +1791,18 @@ function getPeriodKey(fecha, period) {
 }
 function getPeriodLabel(key, period) {
   if (key === 'sin-fecha') return 'Sin fecha';
-  if (period === 'dia')    return getDayLabel(key);
-  if (period === 'semana') return getWeekLabel(new Date(key.split('-W')[0] + '-01-01'));
+  if (period === 'dia') return getDayLabel(key);
+  if (period === 'semana') {
+    // Reconstruct Monday from ISO week key 'YYYY-WNN'
+    const [yearStr, wPart] = key.split('-W');
+    const year = parseInt(yearStr);
+    const week = parseInt(wPart);
+    // Jan 4 is always in week 1 (ISO 8601)
+    const jan4 = new Date(year, 0, 4);
+    const monday1 = getWeekStart(jan4);
+    const targetMonday = new Date(monday1.getTime() + (week - 1) * 7 * 86400000);
+    return getWeekLabel(targetMonday);
+  }
   return getMonthLabel(key);
 }
 function getCurrentPeriodKey(period) {
