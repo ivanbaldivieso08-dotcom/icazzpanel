@@ -1185,7 +1185,9 @@ async function loadFromSupabase() {
     // Transferencias
     const transfs = await sbFetch('transferencias', 'GET', null, '?select=*&order=created_at.desc');
     if (transfs) STATE.transfers = transfs.map(t => ({
-      id: t.id, remitente: t.remitente, monto: parseFloat(t.monto)||0,
+      id: t.id,        // Supabase bigint id (used as local id too)
+      sb_id: t.id,     // explicit sb reference for delete
+      remitente: t.remitente, monto: parseFloat(t.monto)||0,
       concepto: t.concepto||'', barbero: t.barbero||'', fecha: t.fecha||'',
       hora: t.hora||'—', metodo: t.metodo||'Efectivo'
     }));
@@ -1220,13 +1222,15 @@ async function loadFromSupabase() {
       };
     });
 
-    // Bebidas
-    const bebs = await sbFetch('bebidas', 'GET', null, '?select=*&order=nombre');
-    if (bebs && bebs.length) STATE.drinks = bebs.map(b => ({
-      sb_id: b.id, name: b.nombre, emoji: b.emoji||'🥤',
-      price: parseFloat(b.precio)||0, stock: parseInt(b.stock)||0,
-      max: parseInt(b.max)||24, soldToday: 0
-    }));
+    // Bebidas (tabla opcional — si no existe usa datos locales)
+    try {
+      const bebs = await sbFetch('bebidas', 'GET', null, '?select=*&order=nombre');
+      if (bebs && bebs.length) STATE.drinks = bebs.map(b => ({
+        sb_id: b.id, name: b.nombre, emoji: b.emoji||'🥤',
+        price: parseFloat(b.precio)||0, stock: parseInt(b.stock)||0,
+        max: parseInt(b.max)||24, soldToday: 0
+      }));
+    } catch(e) { console.warn('Tabla bebidas no disponible, usando datos locales'); }
 
     // Save fresh data to localStorage
     try { localStorage.setItem('icazz_state', JSON.stringify(STATE)); } catch(e) {}
@@ -1277,14 +1281,19 @@ async function sbDeleteClient(sbId) {
 }
 
 async function sbSaveTransfer(t) {
-  await sbFetch('transferencias', 'POST', {
-    id: t.id, remitente: t.remitente, monto: t.monto, concepto: t.concepto,
-    barbero: t.barbero||null, fecha: t.fecha, hora: t.hora||null, metodo: t.metodo
+  const r = await sbFetch('transferencias', 'POST', {
+    remitente: t.remitente, monto: t.monto, concepto: t.concepto||null,
+    barbero: t.barbero||null, fecha: t.fecha||null, hora: t.hora||null, metodo: t.metodo||'Efectivo'
   });
+  // Store Supabase-generated id so deleteTransfer can use it
+  if (r && r[0]) t.sb_id = r[0].id;
 }
 
-async function sbDeleteTransfer(id) {
-  await sbFetch('transferencias', 'DELETE', null, '?id=eq.' + id);
+async function sbDeleteTransfer(localId) {
+  // Find the transfer by local id and use its sb_id if available
+  const t = STATE.transfers.find(tr => tr.id === localId);
+  const sbId = t ? t.sb_id : null;
+  if (sbId) await sbFetch('transferencias', 'DELETE', null, '?id=eq.' + sbId);
 }
 
 async function sbSaveClosedWeek(week) {
@@ -1297,34 +1306,36 @@ async function sbSaveClosedWeek(week) {
 
 async function sbSaveComisiones() {
   for (const b of ['Alex','Benja','Braian']) {
-    const headers = {
-      'Content-Type': 'application/json',
-      'apikey': SB_KEY,
-      'Authorization': 'Bearer ' + SB_KEY,
-      'Prefer': 'resolution=merge-duplicates,return=minimal'
-    };
     try {
-      await fetch(SB_URL + '/rest/v1/comisiones?on_conflict=barbero', {
-        method: 'POST', headers,
+      await fetch(SB_URL + '/rest/v1/comisiones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SB_KEY,
+          'Authorization': 'Bearer ' + SB_KEY,
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+          'on_conflict': 'barbero'
+        },
         body: JSON.stringify({ barbero: b, porcentaje: STATE.commissions[b] })
       });
-    } catch(e) {}
+    } catch(e) { console.warn('sbSaveComisiones error:', e); }
   }
 }
 
 async function sbMarkPaid(key, monto, barbero) {
-  const headers = {
-    'Content-Type': 'application/json',
-    'apikey': SB_KEY,
-    'Authorization': 'Bearer ' + SB_KEY,
-    'Prefer': 'resolution=merge-duplicates,return=minimal'
-  };
   try {
-    await fetch(SB_URL + '/rest/v1/pagos_comisiones?on_conflict=pay_key', {
-      method: 'POST', headers,
+    await fetch(SB_URL + '/rest/v1/pagos_comisiones', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+        'on_conflict': 'pay_key'
+      },
       body: JSON.stringify({ pay_key: key, monto, barbero })
     });
-  } catch(e) {}
+  } catch(e) { console.warn('sbMarkPaid error:', e); }
 }
 
 async function sbSaveFidelidad(clientRecord, loyData) {
@@ -1337,20 +1348,24 @@ async function sbSaveFidelidad(clientRecord, loyData) {
   if (loyData.sb_id) {
     await sbFetch('fidelidad', 'PATCH', payload, '?id=eq.' + loyData.sb_id);
   } else {
-    const r = await sbFetch('fidelidad', 'POST', { cliente_id: cid, ...payload });
+    // Use upsert on cliente_id to avoid duplicates
+    const r = await sbFetch('fidelidad', 'POST',
+      { cliente_id: cid, ...payload });
     if (r && r[0]) loyData.sb_id = r[0].id;
   }
 }
 
 async function sbSaveDrink(d) {
-  if (d.sb_id) {
-    await sbFetch('bebidas', 'PATCH', { stock: d.stock, precio: d.price, max: d.max, emoji: d.emoji }, '?id=eq.' + d.sb_id);
-  } else {
-    const r = await sbFetch('bebidas', 'POST', {
-      nombre: d.name, emoji: d.emoji, precio: d.price, stock: d.stock, max: d.max
-    });
-    if (r && r[0]) d.sb_id = r[0].id;
-  }
+  try {
+    if (d.sb_id) {
+      await sbFetch('bebidas', 'PATCH', { stock: d.stock, precio: d.price, max: d.max, emoji: d.emoji }, '?id=eq.' + d.sb_id);
+    } else {
+      const r = await sbFetch('bebidas', 'POST', {
+        nombre: d.name, emoji: d.emoji, precio: d.price, stock: d.stock, max: d.max
+      });
+      if (r && r[0]) d.sb_id = r[0].id;
+    }
+  } catch(e) { console.warn('sbSaveDrink error:', e); }
 }
 
 async function sbDeleteDrink(sbId) {
@@ -1778,12 +1793,12 @@ function saveClient() {
   if (!nombre || !dni || !tel) { alert('Nombre, DNI y teléfono son obligatorios.'); return; }
   const idx = parseInt(document.getElementById('cEditIdx').value);
   const createdAt = idx>=0 ? STATE.clients[idx].createdAt : new Date().toISOString();
-  const record = { nombre, dni, tel, dob, createdAt };
+  const existingSbId = idx >= 0 ? (STATE.clients[idx].sb_id || null) : null;
+  const record = { nombre, dni, tel, dob, createdAt, sb_id: existingSbId };
   if (idx >= 0) {
     STATE.clients[idx] = record;
   } else {
     STATE.clients.unshift(record);
-    // Initialize loyalty for new client
     const cid = record.createdAt;
     if (!STATE.loyalty[cid]) {
       STATE.loyalty[cid] = { stamps: 0, history: [], freeCount: 0, pendingFree: false };
@@ -1803,6 +1818,22 @@ function deleteClient(i) {
     sbDeleteClient(sbId);
   });
 }
+
+function updateClientStats() {
+  const total = STATE.clients.length;
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const nuevos = STATE.clients.filter(c => c.createdAt && c.createdAt.startsWith(thisMonth)).length;
+  const upcoming = STATE.clients.filter(c => c.dob && isUpcomingBirthday(c.dob)).length;
+  const ultimo = STATE.clients.length ? STATE.clients[0].nombre : '—';
+
+  const el = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+  el('statClientes', total);
+  el('statNuevosMes', nuevos);
+  el('statCumples', upcoming);
+  el('statUltimo', ultimo);
+}
+
 function renderClients() {
   const q = (document.getElementById('clientSearch').value||'').toLowerCase();
   const list = STATE.clients.filter(c =>
@@ -1891,13 +1922,14 @@ function clearTransferForm() {
 function deleteTransfer(id) {
   customConfirm('¿Eliminar esta transferencia?', function() {
     const idx = STATE.transfers.findIndex(t => t.id===id);
+    const sbId = idx >= 0 ? STATE.transfers[idx].sb_id : null;
     if (idx >= 0) STATE.transfers.splice(idx,1);
     renderTransfers();
     updateTransferStats();
     renderCommissions();
     renderCommissionDetail();
     save();
-    sbDeleteTransfer(id);
+    if (sbId) sbFetch('transferencias', 'DELETE', null, '?id=eq.' + sbId);
   });
 }
 function renderTransfers() {
