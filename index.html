@@ -1125,6 +1125,239 @@ const STATE = {
 
 // Persist in localStorage (resets on close — no localStorage per rules)
 
+
+// ══════════════════════════════════════════════════════════════
+// SUPABASE — base de datos en la nube
+// ══════════════════════════════════════════════════════════════
+const SB_URL = 'https://gbfzxerpdstgnixgrlow.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiZnp4ZXJwZHN0Z25peGdybG93Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MDE4NDksImV4cCI6MjEwMTA3Nzg0OX0.R7tekzCU2xQ0FMyefTIqnv5h9PuEpEHpXUsSWElu04M';
+
+// Generic fetch helper
+async function sbFetch(table, method, body, query, upsert) {
+  const url = SB_URL + '/rest/v1/' + table + (query || '');
+  const pref = upsert ? 'resolution=merge-duplicates' : (method === 'POST' ? 'return=representation' : 'return=minimal');
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Prefer': pref
+  };
+  try {
+    const r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    if (!r.ok) { const e = await r.text(); console.warn('SB ' + method + ' ' + table + ':', e); return null; }
+    if (method === 'DELETE') return true;
+    const text = await r.text();
+    return text ? JSON.parse(text) : true;
+  } catch(e) { console.warn('SB offline:', e.message); return null; }
+}
+
+// ── Status indicator ─────────────────────────────────────────
+function showSyncStatus(msg, color) {
+  let el = document.getElementById('syncStatus');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'syncStatus';
+    el.style.cssText = 'position:fixed;top:10px;right:12px;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;z-index:9999;pointer-events:none;border:1px solid;transition:opacity .4s;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.color = color || 'var(--gold)';
+  el.style.borderColor = color || 'rgba(201,168,76,.4)';
+  el.style.background = 'var(--surface2)';
+  el.style.opacity = '1';
+}
+function hideSyncStatus() {
+  const el = document.getElementById('syncStatus');
+  if (el) el.style.opacity = '0';
+}
+
+// ── LOAD from Supabase (called on init) ─────────────────────
+async function loadFromSupabase() {
+  showSyncStatus('Sincronizando...');
+  try {
+    // Clientes
+    const clientes = await sbFetch('clientes', 'GET', null, '?select=*&order=created_at.desc');
+    if (clientes) STATE.clients = clientes.map(c => ({
+      nombre: c.nombre, dni: c.dni||'', tel: c.tel||'', dob: c.dob||'',
+      createdAt: c.created_at, sb_id: c.id
+    }));
+
+    // Transferencias
+    const transfs = await sbFetch('transferencias', 'GET', null, '?select=*&order=created_at.desc');
+    if (transfs) STATE.transfers = transfs.map(t => ({
+      id: t.id, remitente: t.remitente, monto: parseFloat(t.monto)||0,
+      concepto: t.concepto||'', barbero: t.barbero||'', fecha: t.fecha||'',
+      hora: t.hora||'—', metodo: t.metodo||'Efectivo'
+    }));
+
+    // Semanas cerradas
+    const semanas = await sbFetch('semanas_cerradas', 'GET', null, '?select=*');
+    if (semanas) STATE.closedWeeks = semanas.map(s => ({
+      weekKey: s.week_key, label: s.label, startDate: s.start_date,
+      endDate: s.end_date, closedAt: s.closed_at, total: parseFloat(s.total)||0,
+      count: s.count, autoClose: s.auto_close
+    }));
+
+    // Comisiones %
+    const comis = await sbFetch('comisiones', 'GET', null, '?select=*');
+    if (comis && comis.length) comis.forEach(c => {
+      if (STATE.commissions[c.barbero] !== undefined) STATE.commissions[c.barbero] = c.porcentaje;
+    });
+
+    // Pagos de comisiones
+    const pagos = await sbFetch('pagos_comisiones', 'GET', null, '?select=*');
+    if (pagos) pagos.forEach(p => { STATE.paidMap[p.pay_key] = parseFloat(p.monto)||0; });
+
+    // Fidelidad (join con clientes)
+    const fidel = await sbFetch('fidelidad', 'GET', null, '?select=*,clientes(created_at)');
+    if (fidel) fidel.forEach(f => {
+      const cid = f.clientes && f.clientes.created_at;
+      if (cid) STATE.loyalty[cid] = {
+        stamps: f.stamps||0, freeCount: f.free_count||0,
+        pendingFree: f.pending_free||false,
+        history: (() => { try { return JSON.parse(f.history||'[]'); } catch(e) { return []; } })(),
+        sb_id: f.id, cliente_id: f.cliente_id
+      };
+    });
+
+    // Bebidas
+    const bebs = await sbFetch('bebidas', 'GET', null, '?select=*&order=nombre');
+    if (bebs && bebs.length) STATE.drinks = bebs.map(b => ({
+      sb_id: b.id, name: b.nombre, emoji: b.emoji||'🥤',
+      price: parseFloat(b.precio)||0, stock: parseInt(b.stock)||0,
+      max: parseInt(b.max)||24, soldToday: 0
+    }));
+
+    // Save fresh data to localStorage
+    try { localStorage.setItem('icazz_state', JSON.stringify(STATE)); } catch(e) {}
+
+    showSyncStatus('✓ Conectado', '#4caf82');
+    setTimeout(hideSyncStatus, 2500);
+  } catch(e) {
+    console.error('Error cargando Supabase:', e);
+    showSyncStatus('⚠ Sin conexión', '#e05555');
+    setTimeout(hideSyncStatus, 3000);
+  }
+
+  // Re-render everything after cloud load
+  renderDrinks(); renderLog(); updateDrinkStats();
+  renderClients(); updateClientStats();
+  renderTransfers(); updateTransferStats();
+  renderCommissions(); renderCommissionDetail();
+  renderFidelidadPage();
+  STATE.clients.forEach(c => {
+    if (!STATE.loyalty[c.createdAt])
+      STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false };
+  });
+  ['Alex','Benja','Braian'].forEach(b => {
+    const el = document.getElementById('pct-'+b);
+    if (el) el.value = STATE.commissions[b];
+  });
+  performDailyAutoClose();
+  scheduleDailyClose();
+}
+
+// ── Mutation helpers (called by existing functions) ──────────
+async function sbSaveClient(record, isNew) {
+  if (isNew) {
+    const r = await sbFetch('clientes', 'POST', {
+      nombre: record.nombre, dni: record.dni, tel: record.tel,
+      dob: record.dob || null, created_at: record.createdAt
+    });
+    if (r && r[0]) record.sb_id = r[0].id;
+  } else if (record.sb_id) {
+    await sbFetch('clientes', 'PATCH', {
+      nombre: record.nombre, dni: record.dni, tel: record.tel, dob: record.dob || null
+    }, '?id=eq.' + record.sb_id);
+  }
+}
+
+async function sbDeleteClient(sbId) {
+  if (sbId) await sbFetch('clientes', 'DELETE', null, '?id=eq.' + sbId);
+}
+
+async function sbSaveTransfer(t) {
+  await sbFetch('transferencias', 'POST', {
+    id: t.id, remitente: t.remitente, monto: t.monto, concepto: t.concepto,
+    barbero: t.barbero||null, fecha: t.fecha, hora: t.hora||null, metodo: t.metodo
+  });
+}
+
+async function sbDeleteTransfer(id) {
+  await sbFetch('transferencias', 'DELETE', null, '?id=eq.' + id);
+}
+
+async function sbSaveClosedWeek(week) {
+  await sbFetch('semanas_cerradas', 'POST', {
+    week_key: week.weekKey, label: week.label, start_date: week.startDate,
+    end_date: week.endDate, closed_at: week.closedAt,
+    total: week.total, count: week.count, auto_close: week.autoClose||false
+  });
+}
+
+async function sbSaveComisiones() {
+  for (const b of ['Alex','Benja','Braian']) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Prefer': 'resolution=merge-duplicates,return=minimal'
+    };
+    try {
+      await fetch(SB_URL + '/rest/v1/comisiones?on_conflict=barbero', {
+        method: 'POST', headers,
+        body: JSON.stringify({ barbero: b, porcentaje: STATE.commissions[b] })
+      });
+    } catch(e) {}
+  }
+}
+
+async function sbMarkPaid(key, monto, barbero) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': SB_KEY,
+    'Authorization': 'Bearer ' + SB_KEY,
+    'Prefer': 'resolution=merge-duplicates,return=minimal'
+  };
+  try {
+    await fetch(SB_URL + '/rest/v1/pagos_comisiones?on_conflict=pay_key', {
+      method: 'POST', headers,
+      body: JSON.stringify({ pay_key: key, monto, barbero })
+    });
+  } catch(e) {}
+}
+
+async function sbSaveFidelidad(clientRecord, loyData) {
+  const cid = clientRecord && clientRecord.sb_id;
+  if (!cid) return;
+  const payload = {
+    stamps: loyData.stamps, free_count: loyData.freeCount,
+    pending_free: loyData.pendingFree, history: JSON.stringify(loyData.history||[])
+  };
+  if (loyData.sb_id) {
+    await sbFetch('fidelidad', 'PATCH', payload, '?id=eq.' + loyData.sb_id);
+  } else {
+    const r = await sbFetch('fidelidad', 'POST', { cliente_id: cid, ...payload });
+    if (r && r[0]) loyData.sb_id = r[0].id;
+  }
+}
+
+async function sbSaveDrink(d) {
+  if (d.sb_id) {
+    await sbFetch('bebidas', 'PATCH', { stock: d.stock, precio: d.price, max: d.max, emoji: d.emoji }, '?id=eq.' + d.sb_id);
+  } else {
+    const r = await sbFetch('bebidas', 'POST', {
+      nombre: d.name, emoji: d.emoji, precio: d.price, stock: d.stock, max: d.max
+    });
+    if (r && r[0]) d.sb_id = r[0].id;
+  }
+}
+
+async function sbDeleteDrink(sbId) {
+  if (sbId) await sbFetch('bebidas', 'DELETE', null, '?id=eq.' + sbId);
+}
+
+// ══════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════
 // WEEKLY CAJA SYSTEM
 // Semana: lunes 00:00 → domingo 23:59
@@ -1245,7 +1478,7 @@ function doCloseWeek() {
   if (!transfers.length) { alert('No hay transferencias esta semana para cerrar.'); return; }
   const total = transfers.reduce((s, t) => s + t.monto, 0);
   const dates = transfers.map(t => new Date(t.fecha + 'T00:00:00')).sort((a,b)=>a-b);
-  STATE.closedWeeks.push({
+  const newWeek = {
     weekKey: wk,
     label: getWeekLabel(new Date()),
     startDate: dates[0].toISOString().split('T')[0],
@@ -1254,9 +1487,11 @@ function doCloseWeek() {
     total,
     count:     transfers.length,
     autoClose: false
-  });
+  };
+  STATE.closedWeeks.push(newWeek);
   STATE.currentWeekKey = wk;
   save();
+  sbSaveClosedWeek(newWeek);
   renderTransfers();
   updateTransferStats();
   renderCommissions();
@@ -1293,12 +1528,8 @@ function isWeekClosed(weekKey) {
 }
 
 function save() {
-  try {
-    localStorage.setItem('icazz_state', JSON.stringify(STATE));
-    showSaved();
-  } catch(e) {
-    console.error('Error guardando datos:', e);
-  }
+  try { localStorage.setItem('icazz_state', JSON.stringify(STATE)); } catch(e) {}
+  showSaved();
 }
 
 let _savedTimeout = null;
@@ -1329,7 +1560,7 @@ function load() {
     if (d) Object.assign(STATE, JSON.parse(d));
   } catch(e) {}
 }
-load();
+load(); // load local first, Supabase loads async below
 
 // ══════════════════════════════════════════
 // NAV
@@ -1404,6 +1635,7 @@ function drinkSell(i) {
   logDrink(STATE.drinks[i].name, 'Vendida', STATE.drinks[i].price);
   save();
   renderDrinks();
+  sbSaveDrink(STATE.drinks[i]);
 }
 function drinkAdd(i) {
   if (STATE.drinks[i].stock >= STATE.drinks[i].max) {
@@ -1416,9 +1648,11 @@ function drinkAdd(i) {
 }
 function removeDrink(i) {
   customConfirm('¿Eliminar ' + STATE.drinks[i].name + ' del inventario?', function() {
+    const sbId = STATE.drinks[i].sb_id;
     STATE.drinks.splice(i, 1);
     save();
     renderDrinks();
+    sbDeleteDrink(sbId);
   });
 }
 function resetVentas() {
@@ -1558,12 +1792,15 @@ function saveClient() {
   closeModal('clientModal');
   renderClients();
   save();
+  sbSaveClient(record, idx < 0);
 }
 function deleteClient(i) {
   customConfirm('¿Eliminar a ' + STATE.clients[i].nombre + '?', function() {
+    const sbId = STATE.clients[i].sb_id;
     STATE.clients.splice(i,1);
     renderClients();
     save();
+    sbDeleteClient(sbId);
   });
 }
 function renderClients() {
@@ -1636,6 +1873,8 @@ function addTransfer() {
   renderCommissions();
   renderCommissionDetail();
   save();
+  const _t = STATE.transfers[0];
+  sbSaveTransfer(_t);
 }
 function clearTransferForm() {
   document.getElementById('transfRemitente').value='';
@@ -1658,6 +1897,7 @@ function deleteTransfer(id) {
     renderCommissions();
     renderCommissionDetail();
     save();
+    sbDeleteTransfer(id);
   });
 }
 function renderTransfers() {
@@ -1768,6 +2008,7 @@ function saveComissions() {
   renderCommissions();
   renderCommissionDetail();
   save();
+  sbSaveComisiones();
   // Sync inputs
   ['Alex','Benja','Braian'].forEach(b => {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
@@ -1984,12 +2225,16 @@ function openPayModal(key, amount, barbero) {
 }
 function confirmPay() {
   if (STATE.pendingPayIdx) {
-    const t = STATE.transfers.find(t => STATE.pendingPayIdx === t.barbero+'-'+t.id);
+    const key = STATE.pendingPayIdx;
+    const t = STATE.transfers.find(t => key === t.barbero+'-'+t.id);
+    let pagoMonto = 0;
     if (t) {
       const pct = STATE.commissions[t.barbero] || 50;
-      STATE.paidMap[STATE.pendingPayIdx] = Math.round(t.monto * pct / 100);
+      pagoMonto = Math.round(t.monto * pct / 100);
+      STATE.paidMap[key] = pagoMonto;
     }
     STATE.pendingPayIdx = null;
+    if (pagoMonto > 0) sbMarkPaid(key, pagoMonto, key.split('-')[0]);
   }
   closeModal('payModal');
   renderCommissions();
@@ -2211,6 +2456,9 @@ function logServiceForClient() {
       showCelebration();
     }
   }, 100);
+  // Sync fidelidad to Supabase
+  const _lc = STATE.clients[currentClientIdx];
+  if (_lc) sbSaveFidelidad(_lc, getLoyalty(_lc));
 }
 
 function renderServiceHistory(idx) {
@@ -2252,6 +2500,8 @@ function redeemFreecutConfirmed(idx) {
   renderLoyaltyCard(idx);
   renderClients();
   renderFidelidadPage();
+  const _rc = STATE.clients[idx];
+  if (_rc) sbSaveFidelidad(_rc, getLoyalty(_rc));
 }
 
 // ── Celebration animation
@@ -2346,12 +2596,17 @@ function renderFidelidadPage() {
   }).join('');
 }
 
-// Init loyalty for existing clients that don't have it
+// Init loyalty for existing clients that don't have it (local data)
 STATE.clients.forEach(c => { if (!STATE.loyalty[c.createdAt]) STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false }; });
 
-// Cierre automático diario: ejecutar al cargar y programar para medianoche
-performDailyAutoClose();
-scheduleDailyClose();
+// Initial render from localStorage while Supabase loads
+renderDrinks(); renderLog(); updateDrinkStats();
+renderClients(); updateClientStats();
+renderTransfers(); updateTransferStats();
+renderCommissions(); renderCommissionDetail();
+
+// Load fresh data from Supabase (async — will re-render when done)
+loadFromSupabase();
 
 
 
