@@ -534,12 +534,291 @@ tr:hover td { background:rgba(255,255,255,0.02); }
 .loyalty-stamp-slot.just-stamped { animation:celebrateRing .8s ease-out; }
 @keyframes fadeInOut { 0%{opacity:0;transform:translate(-50%,-60%)} 15%{opacity:1;transform:translate(-50%,-50%)} 75%{opacity:1} 100%{opacity:0;transform:translate(-50%,-44%)} }
 
+
+/* ══════════════════════════════════════════════
+   LOGIN SCREEN
+══════════════════════════════════════════════ */
+#loginScreen {
+  position: fixed; inset: 0; z-index: 99999;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+}
+#loginScreen.hidden { display: none; }
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  padding: 2.5rem 2rem;
+  width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; gap: 1.2rem;
+  position: relative;
+}
+.login-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(to right, transparent, var(--gold), transparent);
+}
+.login-logo {
+  text-align: center;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: .15em;
+  color: var(--gold);
+  margin-bottom: .5rem;
+}
+.login-sub {
+  text-align: center;
+  font-size: .6rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: -.8rem;
+}
+.login-field {
+  display: flex; flex-direction: column; gap: .4rem;
+}
+.login-field label {
+  font-size: .58rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.login-field input {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--cream);
+  font-family: 'DM Mono', monospace;
+  font-size: 16px; /* iOS: prevents zoom on focus */
+  padding: .65rem .75rem;
+  outline: none;
+  width: 100%;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+.login-field input:focus { border-color: var(--gold); }
+.login-error {
+  font-size: .65rem;
+  color: var(--red);
+  text-align: center;
+  min-height: 1rem;
+  letter-spacing: .05em;
+}
+.login-btn {
+  background: var(--gold);
+  color: var(--obsidian);
+  border: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1rem;
+  letter-spacing: .15em;
+  padding: .75rem;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity .2s;
+}
+.login-btn:active { opacity: .8; }
+.login-version {
+  text-align: center;
+  font-size: .5rem;
+  letter-spacing: .1em;
+  color: var(--border2);
+  margin-top: -.5rem;
+}
+
+
+/* Hide the entire panel while locked — only login is visible */
+body.locked > *:not(#loginScreen):not(script) {
+  visibility: hidden !important;
+}
+body.locked {
+  background: #000 !important;
+  overflow: hidden;
+}
+
+
+/* Floating logout button — always visible top-right */
+#logoutBtn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9998;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: .58rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all .2s;
+  -webkit-appearance: none;
+}
+#logoutBtn:hover, #logoutBtn:active {
+  color: var(--red);
+  border-color: var(--red);
+}
+body.locked #logoutBtn { display: none; }
+@media (max-width: 700px) {
+  #logoutBtn { top: 8px; right: 8px; font-size: .5rem; padding: 5px 9px; }
+}
+/* Push sync status left when logout btn is visible */
+#syncStatus { right: 105px !important; }
+@media (max-width: 700px) {
+  #syncStatus { right: 78px !important; }
+}
+
 </style>
 </head>
 <body>
 
 </head>
-<body>
+<body class="locked">
+<button type="button" id="logoutBtn" onclick="doLogout()" ontouchend="event.preventDefault();doLogout();" title="Cerrar sesión">🚪 Salir</button>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">ICAZZ</div>
+    <div class="login-sub">Panel de Administración</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" placeholder="usuario" autocomplete="username" autocorrect="off" autocapitalize="none" spellcheck="false"
+             onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button type="button" class="login-btn" id="loginSubmitBtn">Ingresar</button>
+    <div class="login-version">ICAZZ Barber Studio · Panel v2.0</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// LOGIN — seguridad básica de acceso
+// ══════════════════════════════════════════════
+const LOGIN_CREDENTIALS = [
+  { user: 'alex',   pass: 'icazz2025' },
+  { user: 'admin',  pass: 'barberia2025' }
+];
+const SESSION_KEY = 'icazz_session';
+
+function checkSession() {
+  let s = null;
+  try { s = sessionStorage.getItem(SESSION_KEY); } catch(e) {}
+  if (!s) { try { s = localStorage.getItem(SESSION_KEY); } catch(e) {} }
+  if (s === 'ok') {
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.body.classList.remove('locked');
+  } else {
+    document.body.classList.add('locked');
+  }
+}
+
+function doLogin() {
+  try {
+    const userEl = document.getElementById('loginUser');
+    const passEl = document.getElementById('loginPass');
+    const errEl  = document.getElementById('loginError');
+    if (!userEl || !passEl) { alert('Error: campos no encontrados'); return; }
+
+    const user = (userEl.value || '').trim().toLowerCase();
+    const pass = (passEl.value || '').trim();
+
+    if (!user || !pass) {
+      if (errEl) errEl.textContent = 'Ingresá usuario y contraseña.';
+      return;
+    }
+
+    let valid = false;
+    for (let i = 0; i < LOGIN_CREDENTIALS.length; i++) {
+      const c = LOGIN_CREDENTIALS[i];
+      if (c.user.toLowerCase() === user && c.pass === pass) {
+        valid = true; break;
+      }
+    }
+
+    if (valid) {
+      try { sessionStorage.setItem(SESSION_KEY, 'ok'); } catch(e) {}
+      try { localStorage.setItem(SESSION_KEY, 'ok'); } catch(e) {}
+      const loginEl = document.getElementById('loginScreen');
+      if (loginEl) loginEl.classList.add('hidden');
+      document.body.classList.remove('locked');
+      if (errEl) errEl.textContent = '';
+      // Delay Supabase load to next tick so UI updates first
+      setTimeout(function() {
+        try { if (typeof loadFromSupabase === 'function') loadFromSupabase(); }
+        catch(e) { console.error('load error:', e); }
+      }, 50);
+    } else {
+      if (errEl) errEl.textContent = 'Usuario o contraseña incorrectos.';
+      passEl.value = '';
+      try { passEl.focus(); } catch(e) {}
+    }
+  } catch(e) {
+    alert('Error en login: ' + e.message);
+    console.error(e);
+  }
+}
+
+function doLogout() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
+  location.reload();
+}
+
+// ── Attach login handlers when DOM is ready ─────────────
+function initLoginHandlers() {
+  const btn = document.getElementById('loginSubmitBtn');
+  const userEl = document.getElementById('loginUser');
+  const passEl = document.getElementById('loginPass');
+
+  if (btn && !btn._bound) {
+    btn._bound = true;
+    // Multiple event types for max iOS compatibility
+    btn.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      doLogin();
+    });
+    btn.addEventListener('touchend', function(ev) {
+      ev.preventDefault();
+      doLogin();
+    });
+  }
+
+  if (userEl && !userEl._bound) {
+    userEl._bound = true;
+    userEl.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); passEl.focus(); }
+    });
+  }
+
+  if (passEl && !passEl._bound) {
+    passEl._bound = true;
+    passEl.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); doLogin(); }
+    });
+  }
+}
+
+// Try immediately (DOM should already be parsed at this point)
+initLoginHandlers();
+// Also try after full DOM load as a safety net
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLoginHandlers);
+} else {
+  setTimeout(initLoginHandlers, 0);
+}
+
+// Check session on load
+checkSession();
+</script>
+
+
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -1124,6 +1403,9 @@ const STATE = {
 };
 
 // Persist in localStorage (resets on close — no localStorage per rules)
+
+
+
 
 
 // ══════════════════════════════════════════════════════════════
@@ -2637,8 +2919,8 @@ renderClients(); updateClientStats();
 renderTransfers(); updateTransferStats();
 renderCommissions(); renderCommissionDetail();
 
-// Load fresh data from Supabase (async — will re-render when done)
-loadFromSupabase();
+// Load fresh data from Supabase only if session is active
+if (sessionStorage.getItem(SESSION_KEY) === 'ok') loadFromSupabase();
 
 
 
