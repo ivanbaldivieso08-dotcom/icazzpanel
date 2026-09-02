@@ -1059,6 +1059,7 @@ checkSession();
               <option value="">— Sin asignar —</option>
               <option value="Alex">Alex</option>
               <option value="Elias">Elías</option>
+              <option value="Jesus">Jesús</option>
               <option value="Braian">Braian</option>
             </select>
           </div>
@@ -1138,7 +1139,7 @@ checkSession();
         <button type="button" class="btn btn-gold" onclick="saveComissions()">Guardar</button>
       </div>
       <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;">
           <div class="form-group">
             <label>Alex (%)</label>
             <input type="number" id="pct-Alex" value="50" min="0" max="100">
@@ -1150,6 +1151,10 @@ checkSession();
             <input type="number" id="pct-Elias" value="50" min="0" max="100">
           </div>
           <div class="form-group">
+            <label>Jesús (%)</label>
+            <input type="number" id="pct-Jesus" value="50" min="0" max="100">
+          </div>
+          <div class="form-group">
             <label>Braian (%)</label>
             <input type="number" id="pct-Braian" value="50" min="0" max="100">
           </div>
@@ -1158,7 +1163,7 @@ checkSession();
     </div>
 
     <!-- Cards por barbero -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;" id="commissionCards"></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;" id="commissionCards"></div>
 
     <!-- Detalle por barbero -->
     <div class="card">
@@ -1194,6 +1199,7 @@ checkSession();
               <option value="">Todos</option>
               <option value="Alex">Alex</option>
               <option value="Elias">Elías</option>
+              <option value="Jesus">Jesús</option>
               <option value="Braian">Braian</option>
             </select>
           </div>
@@ -1333,6 +1339,7 @@ checkSession();
         <select id="svcBarbero">
           <option value="Alex">Alex</option>
           <option value="Elias">Elías</option>
+          <option value="Jesus">Jesús</option>
           <option value="Braian">Braian</option>
         </select>
         <button type="button" class="btn btn-gold" onclick="logServiceForClient()" style="white-space:nowrap;">+ Registrar</button>
@@ -1395,7 +1402,7 @@ const STATE = {
   // loyalty[clientId] = { stamps: N, history: [{date,service,type}], freeCount: N, pendingFree: bool }
   loyalty: {},
   transfers: [],
-  commissions: { Alex:50, Elias:50, Braian:50 },
+  commissions: { Alex:50, Elias:50, Jesus:50, Braian:50 },
   paidMap: {},
   pendingPayIdx: null,
   closedWeeks: [],    // array of { weekKey, label, startDate, endDate, closedAt }
@@ -1536,7 +1543,7 @@ async function loadFromSupabase() {
     if (!STATE.loyalty[c.createdAt])
       STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false };
   });
-  ['Alex','Elias','Braian'].forEach(b => {
+  ['Alex','Elias','Jesus','Braian'].forEach(b => {
     const el = document.getElementById('pct-'+b);
     if (el) el.value = STATE.commissions[b];
   });
@@ -1588,7 +1595,7 @@ async function sbSaveClosedWeek(week) {
 }
 
 async function sbSaveComisiones() {
-  for (const b of ['Alex','Elias','Braian']) {
+  for (const b of ['Alex','Elias','Jesus','Braian']) {
     try {
       await fetch(SB_URL + '/rest/v1/comisiones', {
         method: 'POST',
@@ -2246,7 +2253,7 @@ function renderTransfers() {
     return b.localeCompare(a);
   });
 
-  const barbColor = {Alex:'badge-gold',Elias:'badge-green',Braian:'badge-red'};
+  const barbColor = {Alex:'badge-gold',Elias:'badge-green',Jesus:'badge-blue',Braian:'badge-red'};
   let rows = '';
 
   sortedWeeks.forEach(function(wk) {
@@ -2316,7 +2323,7 @@ function updateTransferStats() {
 // COMISIONES
 // ══════════════════════════════════════════
 function saveComissions() {
-  ['Alex','Elias','Braian'].forEach(b => {
+  ['Alex','Elias','Jesus','Braian'].forEach(b => {
     const v = parseInt(document.getElementById('pct-'+b).value);
     if (!isNaN(v) && v >= 0 && v <= 100) STATE.commissions[b] = v;
   });
@@ -2325,7 +2332,7 @@ function saveComissions() {
   save();
   sbSaveComisiones();
   // Sync inputs
-  ['Alex','Elias','Braian'].forEach(b => {
+  ['Alex','Elias','Jesus','Braian'].forEach(b => {
     document.getElementById('pct-'+b).value = STATE.commissions[b];
   });
 }
@@ -2385,7 +2392,7 @@ function getBarberTotals(periodKey) {
   // periodKey = value of filterWeek select (day/week/month key depending on period)
   const period = (document.getElementById('filterPeriod') || {value:'mes'}).value || 'mes';
   const metodo = (document.getElementById('filterMetodo') || {value:''}).value || '';
-  const totals = { Alex:0, Elias:0, Braian:0 };
+  const totals = { Alex:0, Elias:0, Jesus:0, Braian:0 };
   let transfers = STATE.transfers.filter(t => t.barbero);
   if (periodKey) {
     transfers = transfers.filter(t => t.fecha && getPeriodKey(t.fecha, period) === periodKey);
@@ -2421,7 +2428,7 @@ function renderCommissions() {
   const filterPk = weekSel ? weekSel.value : '';
   const totals = getBarberTotals(filterPk || null);
   const cards = document.getElementById('commissionCards');
-  const barbers = ['Alex','Elias','Braian'];
+  const barbers = ['Alex','Elias','Jesus','Braian'];
   const maxTotal = Math.max(...Object.values(totals), 1);
   let totalComis = 0;
   barbers.forEach(b => { totalComis += totals[b] * STATE.commissions[b] / 100; });
@@ -2581,7 +2588,7 @@ renderCommissionDetail();
 STATE.clients.forEach(c => { if (!STATE.loyalty[c.createdAt]) STATE.loyalty[c.createdAt] = { stamps:0, history:[], freeCount:0, pendingFree:false }; });
 
 // Load commission pct inputs
-['Alex','Elias','Braian'].forEach(b => {
+['Alex','Elias','Jesus','Braian'].forEach(b => {
   const el = document.getElementById('pct-'+b);
   if (el) el.value = STATE.commissions[b];
 });
