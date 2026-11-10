@@ -1751,7 +1751,7 @@ function checkAutoClose() {
       const dates = transfers.map(t => new Date(t.fecha + 'T00:00:00')).sort((a,b)=>a-b);
       const startDate = dates.length ? dates[0].toISOString().split('T')[0] : '';
       const endDate   = dates.length ? dates[dates.length-1].toISOString().split('T')[0] : '';
-      STATE.closedWeeks.push({
+      const closedWeek = {
         weekKey: wk,
         label: getWeekLabel(new Date(startDate + 'T12:00:00') || new Date()),
         startDate,
@@ -1760,7 +1760,10 @@ function checkAutoClose() {
         total,
         count: transfers.length,
         autoClose: true
-      });
+      };
+      STATE.closedWeeks.push(closedWeek);
+      // Persistir también el cierre automático en Supabase.
+      sbSaveClosedWeek(closedWeek);
     }
   });
 
@@ -2991,14 +2994,17 @@ function performDailyAutoClose() {
       const dates = transfers.map(t => new Date(t.fecha + 'T00:00:00')).sort((a,b)=>a-b);
       const startDate = dates[0].toISOString().split('T')[0];
       const endDate   = dates[dates.length-1].toISOString().split('T')[0];
-      STATE.closedWeeks.push({
+      const closedWeek = {
         weekKey: wk,
         label: getWeekLabel(new Date(startDate + 'T12:00:00')),
         startDate, endDate,
         closedAt: new Date().toISOString(),
         total, count: transfers.length,
         autoClose: true
-      });
+      };
+      STATE.closedWeeks.push(closedWeek);
+      // Persistir también el cierre automático en Supabase.
+      sbSaveClosedWeek(closedWeek);
       anyClose = true;
     }
   });
@@ -3011,7 +3017,7 @@ function performDailyAutoClose() {
 function msUntilMidnight() {
   const now = new Date();
   const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0); // next 00:00
+  midnight.setHours(24, 0, 0, 0); // próximo cierre a las 00:00
   return midnight - now;
 }
 
